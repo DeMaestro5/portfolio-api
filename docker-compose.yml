@@ -1,0 +1,41 @@
+services:
+  app:
+    # This defines the configuration options, including the context and dockerfile,
+    # that will be applied when Compose builds the application image.
+    build:
+      # This defines the build context for the image build — in this case, the current project directory.
+      context: .
+      # This specifies the Dockerfile in your current project directory as the file
+      dockerfile: Dockerfile
+    image: app
+    container_name: app
+    # This defines the restart policy. The default is no,
+    # but we have set the container to restart unless it is stopped.
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      # This maps port from .env on the host to same port number on the container.
+      - '$PORT:$PORT'
+    links:
+      - redis
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7.2.3
+    container_name: redis-portfolio
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - '$REDIS_PORT:6379'
+    command: redis-server --save 20 1 --loglevel warning --requirepass $REDIS_PASSWORD
+    volumes:
+      - cache:/data/cache
+
+# Our top-level volumes key defines the volumes dbdata.
+# When Docker creates volumes, the contents of the volume are stored in a part of the host filesystem, /var/lib/docker/volumes/, that’s managed by Docker.
+# The contents of each volume are stored in a directory under /var/lib/docker/volumes/ and get mounted to any container that uses the volume.
+# In this way, the data that our users will create will persist in the dbdata volume even if we remove and recreate the db container.
+volumes:
+  cache:
+    driver: local
