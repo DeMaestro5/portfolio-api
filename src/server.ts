@@ -2,6 +2,7 @@ import Logger from './core/Logger';
 import { port } from './config';
 import app from './app';
 
+console.log('server starting...');
 app
   .listen(port, () => {
     Logger.info(`server running on port : ${port}`);
