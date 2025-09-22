@@ -1,44 +1,18 @@
-import Joi from 'joi';
 import { Request, Response, NextFunction } from 'express';
-import { BadRequestError } from '../core/ApiError';
-import { Types } from 'mongoose';
+import Logger from '../core/Logger';
 
-export enum ValidationSource {
-  BODY = 'body',
-  HEADER = 'headers',
-  QUERY = 'query',
-  PARAM = 'params',
-}
+export const validateGithubProfile = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  // we also dont need params validation for this endpoint
+  // but we can add header validation or other checks if needed
 
-export const JoiObjectId = () =>
-  Joi.string().custom((value: string, helpers) => {
-    if (!Types.ObjectId.isValid(value)) return helpers.error('any.invalid');
-    return value;
-  }, 'Object Id Validation');
-
-export const JoiUrlEndpoint = () =>
-  Joi.string().custom((value: string, helpers) => {
-    if (value.includes('://')) return helpers.error('any.invalid');
-    return value;
-  }, 'Url Endpoint Validation');
-
-export default (
-    schema: Joi.AnySchema,
-    source: ValidationSource = ValidationSource.BODY,
-  ) =>
-  (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { error } = schema.validate(req[source]);
-
-      if (!error) return next();
-
-      const { details } = error;
-      const message = details
-        .map((i) => i.message.replace(/['"]+/g, ''))
-        .join(',');
-
-      next(new BadRequestError(message));
-    } catch (error) {
-      next(error);
-    }
-  };
+  Logger.info('Validating github profile request', {
+    ip: req.ip,
+    userAgent: req.headers['user-agent'],
+    endpoint: req.path,
+  });
+  next();
+};

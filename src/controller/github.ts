@@ -21,6 +21,7 @@ export const githubController = {
       const cacheKey = 'github:profile';
       let profile = await cacheService.get<GitHubProfile>(cacheKey);
       let cached = false;
+      let rateLimitInfo: { remaining: number; reset: string } | undefined;
 
       if (!profile) {
         // if not in cache, fetch from github api
@@ -28,18 +29,33 @@ export const githubController = {
         //cache the result for 1 hour
         await cacheService.set(cacheKey, profile, 3600);
         cached = false;
+
+        // only get rate limit info when making fresh api call
+        try {
+          const rateLimit = await githubService.getRateLimit();
+          rateLimitInfo =
+            rateLimit > 0
+              ? {
+                  remaining: rateLimit,
+                  reset: new Date(Date.now() + 3600000).toISOString(),
+                }
+              : undefined;
+        } catch (error) {
+          // if rate limit call fails, continue without it
+          rateLimitInfo = undefined;
+        }
       } else {
         cached = true;
+        // For cached responses, omit rate limit info
+        rateLimitInfo = undefined;
       }
+
       // build response
       const response = new GitHubSuccessResponse<GitHubProfile>(
         'Github profile fetched successfully',
         profile,
         cached,
-        {
-          remaining: 60,
-          reset: new Date(Date.now() + 60000).toISOString(),
-        },
+        rateLimitInfo,
         requestId,
         startTime,
       );
