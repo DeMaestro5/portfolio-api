@@ -15,3 +15,52 @@ export interface GitHubProfile {
   created_at: string;
   updated_at: string;
 }
+
+export interface GitHubCommit {
+  sha: string;
+  message: string;
+  author: {
+    name: string;
+    email: string;
+    date: string;
+  };
+  repository: {
+    name: string;
+    full_name: string;
+  };
+}
+
+export interface GitHubStats {
+  totalRepos: number;
+  totalStars: number;
+  totalForks: number;
+  languages: { [language: string]: number };
+  recentActivity: {
+    activeReposThisWeek: number;
+    activeReposThisMonth: number;
+  };
+}
+
+export interface GitHubRepository {
+  id: number;
+  name: string;
+  full_name: string;
+  description: string | null;
+  language: string | null | undefined;
+  stargazers_count: number | undefined;
+  forks_count: number | undefined;
+  size: number | undefined;
+  created_at: string | undefined | null;
+  updated_at: string | undefined | null;
+  pushed_at: string | undefined | null;
+  html_url: string | undefined | null;
+  clone_url: string | undefined | null;
+  topics: string[] | undefined;
+  is_private: boolean;
+}
+
+export interface GitHubOverview {
+  profile: GitHubProfile;
+  stats: GitHubStats;
+  commits: GitHubCommit[];
+}
