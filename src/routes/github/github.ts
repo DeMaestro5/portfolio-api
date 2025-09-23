@@ -5,6 +5,8 @@ import {
   getActivities,
   getOverview,
   getRepositories,
+  getRepositoryByName,
+  getStats,
   githubController,
 } from '../../controller/github';
 import { githubRateLimit } from '../../middleware/rateLimiter';
@@ -22,5 +24,7 @@ router.get(
 router.get('/overview', githubRateLimit, getOverview);
 router.get('/activities', githubRateLimit, getActivities);
 router.get('/repositories', githubRateLimit, getRepositories);
+router.get('/stats', githubRateLimit, getStats);
+router.get('/repository/:name', githubRateLimit, getRepositoryByName);
 
 export default router;
