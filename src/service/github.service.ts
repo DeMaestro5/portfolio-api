@@ -1,6 +1,7 @@
 import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import {
+  GitHubActivity,
   GitHubCommit,
   GitHubOverview,
   GitHubProfile,
@@ -282,6 +283,72 @@ class GitHubService {
       }
 
       Logger.error('Unexpected error while fetching GitHub overview', error);
+      throw error;
+    }
+  }
+
+  async fetchActivities(limit: number = 50): Promise<GitHubActivity[]> {
+    try {
+      Logger.info('Fetching GitHub activities');
+      const activities =
+        await this.octokit.rest.activity.listPublicEventsForUser({
+          username: process.env.GITHUB_USERNAME!,
+          per_page: limit,
+        });
+
+      const relevantEventTypes = [
+        'PushEvent',
+        'PullRequestEvent',
+        'IssueCommentEvent',
+        'PullRequestReviewCommentEvent',
+        'PullRequestReviewEvent',
+      ];
+
+      const filteredActivities = activities.data
+        .filter((activity) => relevantEventTypes.includes(activity.type ?? ''))
+        .sort(
+          (a, b) =>
+            new Date(b.created_at ?? '').getTime() -
+            new Date(a.created_at ?? '').getTime(),
+        )
+        .slice(0, limit);
+
+      const transformedActivities: GitHubActivity[] = filteredActivities.map(
+        (activity) => ({
+          id: activity.id.toString() ?? '',
+          type: activity.type ?? '',
+          actor: {
+            login: activity.actor?.login ?? '',
+            avatar_url: activity.actor?.avatar_url ?? '',
+          },
+          repo: {
+            name: activity.repo?.name ?? '',
+            url: activity.repo?.url ?? '',
+          },
+          payload: activity.payload ?? {},
+          created_at: activity.created_at ?? '',
+          public: activity.public ?? false,
+        }),
+      );
+
+      Logger.info('Raw GitHub activity data structure:', {
+        totalEvents: activities.data.length,
+        sampleEvent: activities.data[0],
+        eventTypes: activities.data.map((event) => event.type),
+      });
+
+      return transformedActivities;
+    } catch (error: unknown) {
+      if (error instanceof RequestError) {
+        Logger.error('Failed to fetch GitHub activities', {
+          error: error.message,
+          status: error.status,
+          rateLimit: error.response?.headers?.['x-ratelimit-remaining'],
+        });
+        throw new Error(`GitHub API error: ${error.message}`);
+      }
+
+      Logger.error('Unexpected error while fetching GitHub activities', error);
       throw error;
     }
   }
