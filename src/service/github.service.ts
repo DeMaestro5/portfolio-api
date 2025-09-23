@@ -123,6 +123,61 @@ class GitHubService {
     }
   }
 
+  async fetchRepositoryByName(name: string): Promise<GitHubRepository> {
+    try {
+      Logger.info('Fetching GitHub repository by name', { name });
+
+      const [owner, repo] = name.split('/');
+      if (!owner || !repo) {
+        throw new Error(
+          `Invalid repo name format: "${name}". Expected "owner/repo".`,
+        );
+      }
+
+      const response = await this.octokit.rest.repos.get({
+        owner,
+        repo,
+      });
+      console.log('fetching repository by name', name);
+
+      console.log('response.data', response.data);
+
+      const repository: GitHubRepository = {
+        id: response.data.id,
+        name: response.data.name,
+        full_name: response.data.full_name,
+        description: response.data.description,
+        language: response.data.language,
+        stargazers_count: response.data.stargazers_count,
+        forks_count: response.data.forks_count,
+        size: response.data.size,
+        created_at: response.data.created_at,
+        updated_at: response.data.updated_at,
+        pushed_at: response.data.pushed_at,
+        html_url: response.data.html_url,
+        clone_url: response.data.clone_url,
+        topics: response.data.topics,
+        is_private: response.data.private,
+      };
+
+      return repository;
+    } catch (error: unknown) {
+      if (error instanceof RequestError) {
+        Logger.error('Failed to fetch GitHub repository by id', {
+          error: error.message,
+          status: error.status,
+          rateLimit: error.response?.headers?.['x-ratelimit-remaining'],
+        });
+        throw new Error(`GitHub API error: ${error.message}`);
+      }
+      Logger.error(
+        'Unexpected error while fetching GitHub repository by id',
+        error,
+      );
+      throw error;
+    }
+  }
+
   async calculateStats(repositories: GitHubRepository[]): Promise<GitHubStats> {
     try {
       const stats: GitHubStats = {
