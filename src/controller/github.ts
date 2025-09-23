@@ -7,6 +7,7 @@ import {
   GitHubActivity,
   GitHubOverview,
   GitHubProfile,
+  GitHubRepository,
 } from '../types/github.types';
 import {
   GitHubErrorResponse,
@@ -197,6 +198,66 @@ export const getActivities = async (
 
     const errorResponse = new GitHubErrorResponse(
       'Failed to fetch github activities',
+      error.message,
+      undefined,
+      requestId,
+    );
+    errorResponse.send(res);
+  }
+};
+
+export const getRepositories = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const requestId = uuidv4();
+  const startTime = Date.now();
+  try {
+    Logger.info('Github repositories request started', requestId);
+
+    const cacheKey = 'github:repositories';
+    let repositories = await cacheService.get<GitHubRepository[]>(cacheKey);
+    let cached = false;
+    let rateLimitInfo: { remaining: number; reset: string } | undefined;
+
+    if (!repositories) {
+      repositories = await githubService.fetchRepositories();
+      await cacheService.set(cacheKey, repositories, 3600);
+      cached = false;
+
+      rateLimitInfo = await getRateLimit();
+    } else {
+      startTime;
+      cached = true;
+      rateLimitInfo = undefined;
+    }
+
+    const response = new GitHubSuccessResponse<GitHubRepository[]>(
+      'Github repositories fetched successfully',
+      repositories,
+      cached,
+      rateLimitInfo,
+      requestId,
+      startTime,
+    );
+    response.send(res);
+
+    const duration = Date.now() - startTime;
+    Logger.info('Github repositories request completed', {
+      requestId,
+      cached,
+      duration: `${duration}ms`,
+    });
+  } catch (error: any) {
+    const duration = Date.now() - startTime;
+    Logger.error('Github repositories request failed', {
+      requestId,
+      error: error.message,
+      duration: `${duration}ms`,
+    });
+
+    const errorResponse = new GitHubErrorResponse(
+      'Failed to fetch github repositories',
       error.message,
       undefined,
       requestId,

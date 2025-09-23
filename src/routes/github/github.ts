@@ -4,6 +4,7 @@ import { validateGithubProfile } from '../../helpers/validator';
 import {
   getActivities,
   getOverview,
+  getRepositories,
   githubController,
 } from '../../controller/github';
 import { githubRateLimit } from '../../middleware/rateLimiter';
@@ -20,5 +21,6 @@ router.get(
 
 router.get('/overview', githubRateLimit, getOverview);
 router.get('/activities', githubRateLimit, getActivities);
+router.get('/repositories', githubRateLimit, getRepositories);
 
 export default router;
