@@ -2,7 +2,12 @@ import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import Logger from '../core/Logger';
 import { cacheService } from '../service/cache.service';
-import { GitHubOverview, GitHubProfile } from '../types/github.types';
+import {
+  ActivityFeed,
+  GitHubActivity,
+  GitHubOverview,
+  GitHubProfile,
+} from '../types/github.types';
 import {
   GitHubErrorResponse,
   GitHubSuccessResponse,
@@ -127,6 +132,71 @@ export const getOverview = async (
 
     const errorResponse = new GitHubErrorResponse(
       'Failed to fetch github overview',
+      error.message,
+      undefined,
+      requestId,
+    );
+    errorResponse.send(res);
+  }
+};
+
+export const getActivities = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const requestId = uuidv4();
+  const startTime = Date.now();
+  try {
+    Logger.info('Github activities request started', requestId);
+
+    const cacheKey = 'github:activities';
+    let activities = await cacheService.get<GitHubActivity[]>(cacheKey);
+    let cached = false;
+    let rateLimitInfo: { remaining: number; reset: string } | undefined;
+
+    if (!activities) {
+      activities = await githubService.fetchActivities();
+      await cacheService.set(cacheKey, activities, 600);
+      cached = false;
+
+      rateLimitInfo = await getRateLimit();
+    } else {
+      cached = true;
+      rateLimitInfo = undefined;
+    }
+
+    const activityFeed: ActivityFeed = {
+      activities,
+      totalCount: activities.length,
+      lastUpdated: new Date().toISOString(),
+    };
+
+    const response = new GitHubSuccessResponse<ActivityFeed>(
+      'Github activities fetched successfully',
+      activityFeed,
+      cached,
+      rateLimitInfo,
+      requestId,
+      startTime,
+    );
+    response.send(res);
+
+    const duration = Date.now() - startTime;
+    Logger.info('Github activities request completed', {
+      requestId,
+      cached,
+      duration: `${duration}ms`,
+    });
+  } catch (error: any) {
+    const duration = Date.now() - startTime;
+    Logger.error('Github activities request failed', {
+      requestId,
+      error: error.message,
+      duration: `${duration}ms`,
+    });
+
+    const errorResponse = new GitHubErrorResponse(
+      'Failed to fetch github activities',
       error.message,
       undefined,
       requestId,

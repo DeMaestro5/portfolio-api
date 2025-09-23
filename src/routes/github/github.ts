@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import logGithubApiReq from '../../middleware/logGithubApiReq';
 import { validateGithubProfile } from '../../helpers/validator';
-import { getOverview, githubController } from '../../controller/github';
+import {
+  getActivities,
+  getOverview,
+  githubController,
+} from '../../controller/github';
 import { githubRateLimit } from '../../middleware/rateLimiter';
 
 const router = Router();
@@ -15,5 +19,6 @@ router.get(
 );
 
 router.get('/overview', githubRateLimit, getOverview);
+router.get('/activities', githubRateLimit, getActivities);
 
 export default router;

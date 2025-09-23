@@ -64,3 +64,25 @@ export interface GitHubOverview {
   stats: GitHubStats;
   commits: GitHubCommit[];
 }
+
+export interface GitHubActivity {
+  id: string;
+  type: string;
+  actor: {
+    login: string;
+    avatar_url: string;
+  };
+  repo: {
+    name: string;
+    url: string;
+  };
+  payload: any;
+  created_at: string;
+  public: boolean;
+}
+
+export interface ActivityFeed {
+  activities: GitHubActivity[];
+  totalCount: number;
+  lastUpdated: string;
+}
