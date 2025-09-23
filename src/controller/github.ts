@@ -2,12 +2,13 @@ import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import Logger from '../core/Logger';
 import { cacheService } from '../service/cache.service';
-import { GitHubProfile } from '../types/github.types';
+import { GitHubOverview, GitHubProfile } from '../types/github.types';
 import {
   GitHubErrorResponse,
   GitHubSuccessResponse,
 } from '../core/ApiResponse';
 import { githubService } from '../service/github.service';
+import { getRateLimit } from '../helpers/getRateLimit';
 
 export const githubController = {
   async getProfile(req: Request, res: Response): Promise<void> {
@@ -31,19 +32,7 @@ export const githubController = {
         cached = false;
 
         // only get rate limit info when making fresh api call
-        try {
-          const rateLimit = await githubService.getRateLimit();
-          rateLimitInfo =
-            rateLimit > 0
-              ? {
-                  remaining: rateLimit,
-                  reset: new Date(Date.now() + 3600000).toISOString(),
-                }
-              : undefined;
-        } catch (error) {
-          // if rate limit call fails, continue without it
-          rateLimitInfo = undefined;
-        }
+        rateLimitInfo = await getRateLimit();
       } else {
         cached = true;
         // For cached responses, omit rate limit info
@@ -85,4 +74,63 @@ export const githubController = {
       errorResponse.send(res);
     }
   },
+};
+
+export const getOverview = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const requestId = uuidv4();
+  const startTime = Date.now();
+  try {
+    Logger.info('Github overview request started', requestId);
+
+    const cacheKey = 'github:overview';
+    let overview = await cacheService.get<GitHubOverview>(cacheKey);
+    let cached = false;
+    let rateLimitInfo: { remaining: number; reset: string } | undefined;
+
+    if (!overview) {
+      overview = await githubService.getOverview();
+      await cacheService.set(cacheKey, overview, 3600);
+      cached = false;
+
+      rateLimitInfo = await getRateLimit();
+    } else {
+      cached = true;
+    }
+
+    const response = new GitHubSuccessResponse<GitHubOverview>(
+      'Github overview fetched successfully',
+      overview,
+      cached,
+      rateLimitInfo,
+      requestId,
+      startTime,
+    );
+    response.send(res);
+
+    const duration = Date.now() - startTime;
+    Logger.info('Github overview request completed', {
+      requestId,
+      cached,
+      duration: `${duration}ms`,
+      username: overview.profile.login,
+    });
+  } catch (error: any) {
+    const duration = Date.now() - startTime;
+    Logger.error('Github overview request failed', {
+      requestId,
+      error: error.message,
+      duration: `${duration}ms`,
+    });
+
+    const errorResponse = new GitHubErrorResponse(
+      'Failed to fetch github overview',
+      error.message,
+      undefined,
+      requestId,
+    );
+    errorResponse.send(res);
+  }
 };
