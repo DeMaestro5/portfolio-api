@@ -11,6 +11,7 @@ import {
   getRepositoryCommits,
   getRepositoryLanguages,
   getRepositoryContributors,
+  getEvents,
 } from '../../controller/github';
 import { githubRateLimit } from '../../middleware/rateLimiter';
 
@@ -40,4 +41,6 @@ router.get(
   githubRateLimit,
   getRepositoryContributors,
 );
+router.get('/events', githubRateLimit, getEvents);
+
 export default router;
