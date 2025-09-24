@@ -91,3 +91,9 @@ export interface GitHubLanguage {
   language: string;
   bytes: number;
 }
+
+export interface GitHubContributor {
+  login: string;
+  avatar_url: string;
+  contributions: number;
+}

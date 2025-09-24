@@ -10,6 +10,7 @@ import {
   githubController,
   getRepositoryCommits,
   getRepositoryLanguages,
+  getRepositoryContributors,
 } from '../../controller/github';
 import { githubRateLimit } from '../../middleware/rateLimiter';
 
@@ -33,5 +34,10 @@ router.get(
   '/repository/:name/languages',
   githubRateLimit,
   getRepositoryLanguages,
+);
+router.get(
+  '/repository/:name/contributors',
+  githubRateLimit,
+  getRepositoryContributors,
 );
 export default router;
