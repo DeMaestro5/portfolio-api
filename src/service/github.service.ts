@@ -3,6 +3,7 @@ import { RequestError } from '@octokit/request-error';
 import {
   GitHubActivity,
   GitHubCommit,
+  GitHubLanguage,
   GitHubOverview,
   GitHubProfile,
   GitHubRepository,
@@ -274,6 +275,47 @@ class GitHubService {
         });
         throw new Error(`GitHub API error: ${error.message}`);
       }
+      throw error;
+    }
+  }
+
+  async fetchRepositoryLanguages(name: string): Promise<GitHubLanguage[]> {
+    try {
+      Logger.info('Fetching languages by name', { name });
+      const [owner, repo] = name.split('/');
+      if (!owner || !repo) {
+        throw new Error(
+          `Invalid repo name format: "${name}". Expected "owner/repo".`,
+        );
+      }
+
+      const response = await this.octokit.rest.repos.listLanguages({
+        owner,
+        repo,
+      });
+
+      const languages: GitHubLanguage[] = Object.entries(response.data).map(
+        ([language, bytes]) => {
+          return {
+            language,
+            bytes,
+          };
+        },
+      );
+
+      Logger.info('Github languages fetched successfully', {
+        languages: languages.length,
+      });
+
+      return languages;
+    } catch (error: unknown) {
+      if (error instanceof RequestError) {
+        Logger.error('Failed to fetch GitHub languages', {
+          error: error.message,
+        });
+        throw new Error(`GitHub API error: ${error.message}`);
+      }
+      Logger.error('Unexpected error while fetching GitHub languages', error);
       throw error;
     }
   }

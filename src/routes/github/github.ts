@@ -9,6 +9,7 @@ import {
   getStats,
   githubController,
   getRepositoryCommits,
+  getRepositoryLanguages,
 } from '../../controller/github';
 import { githubRateLimit } from '../../middleware/rateLimiter';
 
@@ -28,5 +29,9 @@ router.get('/repositories', githubRateLimit, getRepositories);
 router.get('/stats', githubRateLimit, getStats);
 router.get('/repository/:name', githubRateLimit, getRepositoryByName);
 router.get('/repository/:name/commits', githubRateLimit, getRepositoryCommits);
-
+router.get(
+  '/repository/:name/languages',
+  githubRateLimit,
+  getRepositoryLanguages,
+);
 export default router;

@@ -6,6 +6,7 @@ import {
   ActivityFeed,
   GitHubActivity,
   GitHubCommit,
+  GitHubLanguage,
   GitHubOverview,
   GitHubProfile,
   GitHubRepository,
@@ -407,5 +408,56 @@ export const getRepositoryCommits = async (
       error: error.message,
       duration: `${duration}ms`,
     });
+  }
+};
+
+export const getRepositoryLanguages = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const requestId = uuidv4();
+  const startTime = Date.now();
+
+  try {
+    Logger.info('Github repository languages request started', requestId);
+    const repoName = `${process.env.GITHUB_USERNAME}/${req.params.name}`;
+    const cacheKey = `github:repository:${repoName}/languages`;
+    let languages = await cacheService.get<GitHubLanguage[]>(cacheKey);
+    let cached = false;
+    let rateLimitInfo: { remaining: number; reset: string } | undefined;
+
+    if (!languages) {
+      languages = await githubService.fetchRepositoryLanguages(repoName);
+      await cacheService.set(cacheKey, languages, 3600);
+      cached = false;
+    } else {
+      cached = true;
+      rateLimitInfo = undefined;
+    }
+
+    const response = new GitHubSuccessResponse<GitHubLanguage[]>(
+      'Github repository languages fetched successfully',
+      languages,
+      cached,
+      rateLimitInfo,
+      requestId,
+      startTime,
+    );
+    response.send(res);
+  } catch (error: any) {
+    const duration = Date.now() - startTime;
+    Logger.error('Github repository languages request failed', {
+      requestId,
+      error: error.message,
+      duration: `${duration}ms`,
+    });
+
+    const errorResponse = new GitHubErrorResponse(
+      'Failed to fetch github repository languages',
+      error.message,
+      undefined,
+      requestId,
+    );
+    errorResponse.send(res);
   }
 };

@@ -86,3 +86,8 @@ export interface ActivityFeed {
   totalCount: number;
   lastUpdated: string;
 }
+
+export interface GitHubLanguage {
+  language: string;
+  bytes: number;
+}
