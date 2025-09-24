@@ -138,9 +138,6 @@ class GitHubService {
         owner,
         repo,
       });
-      console.log('fetching repository by name', name);
-
-      console.log('response.data', response.data);
 
       const repository: GitHubRepository = {
         id: response.data.id,
@@ -174,6 +171,54 @@ class GitHubService {
         'Unexpected error while fetching GitHub repository by id',
         error,
       );
+      throw error;
+    }
+  }
+
+  async fetchRepositoryCommits(name: string): Promise<GitHubCommit[]> {
+    try {
+      Logger.info('Fetching commits by name', { name });
+      const [owner, repo] = name.split('/');
+      if (!owner || !repo) {
+        throw new Error(
+          `Invalid repo name format: "${name}". Expected "owner/repo".`,
+        );
+      }
+
+      const response = await this.octokit.rest.repos.listCommits({
+        owner,
+        repo,
+      });
+
+      const commits: GitHubCommit[] = response.data.map((commit) => {
+        return {
+          sha: commit.sha,
+          message: commit.commit.message,
+          author: {
+            name: commit.commit.author?.name ?? '',
+            email: commit.commit.author?.email ?? '',
+            date: commit.commit.author?.date ?? '',
+          },
+          repository: {
+            name: repo,
+            full_name: name,
+          },
+        };
+      });
+
+      Logger.info('Github commits fetched successfully', {
+        commits: commits.length,
+      });
+
+      return commits;
+    } catch (error: unknown) {
+      if (error instanceof RequestError) {
+        Logger.error('Failed to fetch GitHub commits', {
+          error: error.message,
+        });
+        throw new Error(`GitHub API error: ${error.message}`);
+      }
+      Logger.error('Unexpected error while fetching GitHub commits', error);
       throw error;
     }
   }
