@@ -3,6 +3,7 @@ import { RequestError } from '@octokit/request-error';
 import {
   GitHubActivity,
   GitHubCommit,
+  GitHubContributor,
   GitHubLanguage,
   GitHubOverview,
   GitHubProfile,
@@ -316,6 +317,49 @@ class GitHubService {
         throw new Error(`GitHub API error: ${error.message}`);
       }
       Logger.error('Unexpected error while fetching GitHub languages', error);
+      throw error;
+    }
+  }
+
+  async fetchRepositoryContributors(
+    name: string,
+  ): Promise<GitHubContributor[]> {
+    try {
+      Logger.info('Fetching contributors by name', { name });
+      const [owner, repo] = name.split('/');
+      if (!owner || !repo) {
+        throw new Error(
+          `Invalid repo name format: "${name}". Expected "owner/repo".`,
+        );
+      }
+
+      const response = await this.octokit.rest.repos.listContributors({
+        owner,
+        repo,
+      });
+
+      const contributors: GitHubContributor[] = response.data.map(
+        (contributor) => {
+          return {
+            login: contributor.login || '',
+            avatar_url: contributor.avatar_url || '',
+            contributions: contributor.contributions || 0,
+          };
+        },
+      );
+
+      Logger.info('Github contributors fetched successfully', {
+        contributors: contributors.length,
+      });
+
+      return contributors;
+    } catch (error: unknown) {
+      if (error instanceof RequestError) {
+        Logger.error('Failed to fetch GitHub contributors', {
+          error: error.message,
+        });
+        throw new Error(`GitHub API error: ${error.message}`);
+      }
       throw error;
     }
   }

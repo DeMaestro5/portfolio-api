@@ -6,6 +6,7 @@ import {
   ActivityFeed,
   GitHubActivity,
   GitHubCommit,
+  GitHubContributor,
   GitHubLanguage,
   GitHubOverview,
   GitHubProfile,
@@ -459,5 +460,64 @@ export const getRepositoryLanguages = async (
       requestId,
     );
     errorResponse.send(res);
+  }
+};
+
+export const getRepositoryContributors = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const requestId = uuidv4();
+  const startTime = Date.now();
+
+  try {
+    Logger.info('Github repository contributors request started', requestId);
+    const repoName = `${process.env.GITHUB_USERNAME}/${req.params.name}`;
+    const cacheKey = `github:repository:${repoName}/contributors`;
+    let contributors = await cacheService.get<GitHubContributor[]>(cacheKey);
+    let cached = false;
+    let rateLimitInfo: { remaining: number; reset: string } | undefined;
+
+    if (!contributors) {
+      contributors = await githubService.fetchRepositoryContributors(repoName);
+      await cacheService.set(cacheKey, contributors, 3600);
+      cached = false;
+    } else {
+      cached = true;
+      rateLimitInfo = undefined;
+    }
+
+    const response = new GitHubSuccessResponse<GitHubContributor[]>(
+      'Github repository contributors fetched successfully',
+      contributors,
+      cached,
+      rateLimitInfo,
+      requestId,
+      startTime,
+    );
+    response.send(res);
+
+    const duration = Date.now() - startTime;
+    Logger.info('Github repository contributors request completed', {
+      requestId,
+      cached,
+      duration: `${duration}ms`,
+    });
+  } catch (error: any) {
+    const duration = Date.now() - startTime;
+    Logger.error('Github repository contributors request failed', {
+      requestId,
+      error: error.message,
+      duration: `${duration}ms`,
+    });
+
+    const errorResponse = new GitHubErrorResponse(
+      'Failed to fetch github repository contributors',
+      error.message,
+      undefined,
+      requestId,
+    );
+    errorResponse.send(res);
+    throw error;
   }
 };
