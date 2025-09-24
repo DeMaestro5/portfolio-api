@@ -5,6 +5,7 @@ import { cacheService } from '../service/cache.service';
 import {
   ActivityFeed,
   GitHubActivity,
+  GitHubCommit,
   GitHubOverview,
   GitHubProfile,
   GitHubRepository,
@@ -360,6 +361,48 @@ export const getStats = async (req: Request, res: Response): Promise<void> => {
   } catch (error: any) {
     const duration = Date.now() - startTime;
     Logger.error('Github stats request failed', {
+      requestId,
+      error: error.message,
+      duration: `${duration}ms`,
+    });
+  }
+};
+
+export const getRepositoryCommits = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const requestId = uuidv4();
+  const startTime = Date.now();
+  try {
+    Logger.info('Github repository commits request started', requestId);
+    const repoName = `${process.env.GITHUB_USERNAME}/${req.params.name}`;
+    const cacheKey = `github:repository:${repoName}/commits`;
+    let commits = await cacheService.get<GitHubCommit[]>(cacheKey);
+    let cached = false;
+    let rateLimitInfo: { remaining: number; reset: string } | undefined;
+
+    if (!commits) {
+      commits = await githubService.fetchRepositoryCommits(repoName);
+      await cacheService.set(cacheKey, commits, 3600);
+      cached = false;
+    } else {
+      cached = true;
+      rateLimitInfo = undefined;
+    }
+
+    const response = new GitHubSuccessResponse<GitHubCommit[]>(
+      'Github repository commits fetched successfully',
+      commits,
+      cached,
+      rateLimitInfo,
+      requestId,
+      startTime,
+    );
+    response.send(res);
+  } catch (error: any) {
+    const duration = Date.now() - startTime;
+    Logger.error('Github repository commits request failed', {
       requestId,
       error: error.message,
       duration: `${duration}ms`,
