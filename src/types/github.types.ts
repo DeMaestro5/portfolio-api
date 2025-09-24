@@ -97,3 +97,15 @@ export interface GitHubContributor {
   avatar_url: string;
   contributions: number;
 }
+
+export interface GitHubEvents {
+  id: string;
+  type: string;
+  actor: {
+    login: string;
+    avatar_url: string;
+  };
+  repo: {
+    name: string;
+  };
+}

@@ -7,6 +7,7 @@ import {
   GitHubActivity,
   GitHubCommit,
   GitHubContributor,
+  GitHubEvents,
   GitHubLanguage,
   GitHubOverview,
   GitHubProfile,
@@ -519,5 +520,51 @@ export const getRepositoryContributors = async (
     );
     errorResponse.send(res);
     throw error;
+  }
+};
+
+export const getEvents = async (req: Request, res: Response): Promise<void> => {
+  const requestId = uuidv4();
+  const startTime = Date.now();
+
+  try {
+    Logger.info('Github events request started', requestId);
+    const cacheKey = 'github:events';
+    let events = await cacheService.get<GitHubEvents[]>(cacheKey);
+    let cached = false;
+    let rateLimitInfo: { remaining: number; reset: string } | undefined;
+
+    if (!events) {
+      events = await githubService.fetchEvents();
+      await cacheService.set(cacheKey, events, 3600);
+      cached = false;
+    } else {
+      cached = true;
+      rateLimitInfo = undefined;
+    }
+
+    const response = new GitHubSuccessResponse<GitHubEvents[]>(
+      'Github events fetched successfully',
+      events,
+      cached,
+      rateLimitInfo,
+      requestId,
+      startTime,
+    );
+    response.send(res);
+
+    const duration = Date.now() - startTime;
+    Logger.info('Github events request completed', {
+      requestId,
+      cached,
+      duration: `${duration}ms`,
+    });
+  } catch (error: any) {
+    const duration = Date.now() - startTime;
+    Logger.error('Github events request failed', {
+      requestId,
+      error: error.message,
+      duration: `${duration}ms`,
+    });
   }
 };

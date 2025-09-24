@@ -4,6 +4,7 @@ import {
   GitHubActivity,
   GitHubCommit,
   GitHubContributor,
+  GitHubEvents,
   GitHubLanguage,
   GitHubOverview,
   GitHubProfile,
@@ -356,6 +357,45 @@ class GitHubService {
     } catch (error: unknown) {
       if (error instanceof RequestError) {
         Logger.error('Failed to fetch GitHub contributors', {
+          error: error.message,
+        });
+        throw new Error(`GitHub API error: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  async fetchEvents(): Promise<GitHubEvents[]> {
+    try {
+      Logger.info('Fetching GitHub events');
+      const response = await this.octokit.rest.activity.listPublicEventsForUser(
+        {
+          username: process.env.GITHUB_USERNAME!,
+          per_page: 50,
+        },
+      );
+      const events: GitHubEvents[] = response.data.map((event) => {
+        return {
+          id: event.id.toString(),
+          type: event.type || '',
+          actor: {
+            login: event.actor?.login || '',
+            avatar_url: event.actor?.avatar_url || '',
+          },
+          repo: {
+            name: event.repo?.name || '',
+          },
+        };
+      });
+
+      Logger.info('Github events fetched successfully', {
+        events: events.length,
+      });
+
+      return events;
+    } catch (error: unknown) {
+      if (error instanceof RequestError) {
+        Logger.error('Failed to fetch GitHub events', {
           error: error.message,
         });
         throw new Error(`GitHub API error: ${error.message}`);
