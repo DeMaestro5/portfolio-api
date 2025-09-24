@@ -10,3 +10,8 @@ export const githubRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+export const webhookRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+});

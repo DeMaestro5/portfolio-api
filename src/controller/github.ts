@@ -22,6 +22,8 @@ import {
 import { githubService } from '../service/github.service';
 import { getRateLimit } from '../helpers/getRateLimit';
 import { syncService } from '../service/sync.service';
+import { verifyWebhookSignature } from '../helpers/webhookSecurity';
+import { processWebhookEvent } from '../helpers/webhookHandler';
 
 export const githubController = {
   async getProfile(req: Request, res: Response): Promise<void> {
@@ -604,5 +606,65 @@ export const syncGitHubData = async (
       requestId,
     );
     errorResponse.send(res);
+  }
+};
+
+export const handleGithubWebhook = async (req: Request, res: Response) => {
+  const requestId = uuidv4();
+  const startTime = Date.now();
+
+  try {
+    const signature = (req.headers['x-hub-signature-256'] as string) || '';
+
+    let payload: Buffer;
+    if ((req as any).rawBody) {
+      payload = (req as any).rawBody as Buffer;
+    } else {
+      const bodyString = JSON.stringify(req.body);
+      payload = Buffer.from(bodyString, 'utf8');
+    }
+
+    if (!signature || !payload) {
+      return res.status(400).json({ message: 'Missing signature or payload' });
+    }
+
+    if (!verifyWebhookSignature(payload, signature)) {
+      Logger.warn('Invalid Webhook Signature', { requestId });
+      return res.status(401).json({
+        message: 'Invalid Webhook Signature',
+      });
+    }
+
+    const eventType = req.headers['x-github-event'] as string;
+    const eventPayload = req.body;
+
+    Logger.info('Github webhook received', {
+      requestId,
+      eventType,
+      repository: eventPayload.repository?.name,
+    });
+
+    await processWebhookEvent(eventType, eventPayload);
+
+    res.status(200).json({
+      message: 'Webhook processed successfully',
+    });
+
+    const duration = Date.now() - startTime;
+    Logger.info('Github webhook processed', {
+      requestId,
+      duration: `${duration}ms`,
+    });
+  } catch (error: any) {
+    const duration = Date.now() - startTime;
+    Logger.error('GitHub webhook failed', {
+      requestId,
+      error: error.message,
+      duration: `${duration}ms`,
+    });
+
+    res.status(500).json({
+      message: 'Webhook processing failed',
+    });
   }
 };

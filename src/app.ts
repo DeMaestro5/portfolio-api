@@ -17,7 +17,19 @@ process.on('uncaughtException', (e) => {
 
 const app = express();
 
-app.use(express.json({ limit: '10mb' }));
+app.use(
+  express.json({
+    limit: '10mb',
+    verify: (req: any, _res, buf) => {
+      if (
+        req.originalUrl.includes('/webhook') ||
+        req.url.includes('/webhook')
+      ) {
+        req.rawBody = buf;
+      }
+    },
+  }),
+);
 app.use(
   express.urlencoded({ limit: '10mb', extended: true, parameterLimit: 50000 }),
 );

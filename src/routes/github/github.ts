@@ -13,8 +13,12 @@ import {
   getRepositoryContributors,
   getEvents,
   syncGitHubData,
+  handleGithubWebhook,
 } from '../../controller/github';
-import { githubRateLimit } from '../../middleware/rateLimiter';
+import {
+  githubRateLimit,
+  webhookRateLimit,
+} from '../../middleware/rateLimiter';
 
 const router = Router();
 router.use(logGithubApiReq);
@@ -44,5 +48,6 @@ router.get(
 );
 router.get('/events', githubRateLimit, getEvents);
 router.post('/sync', githubRateLimit, syncGitHubData);
+router.post('/webhook', webhookRateLimit, handleGithubWebhook);
 
 export default router;
