@@ -63,6 +63,15 @@ export interface GitHubOverview {
   profile: GitHubProfile;
   stats: GitHubStats;
   commits: GitHubCommit[];
+  activities?: GitHubActivity[];
+}
+
+export interface SyncResult {
+  success: boolean;
+  syncedData: string[];
+  errors: string[];
+  duration: number;
+  overview?: GitHubOverview;
 }
 
 export interface GitHubActivity {

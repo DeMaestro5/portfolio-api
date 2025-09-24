@@ -13,6 +13,7 @@ import {
   GitHubProfile,
   GitHubRepository,
   GitHubStats,
+  SyncResult,
 } from '../types/github.types';
 import {
   GitHubErrorResponse,
@@ -20,6 +21,7 @@ import {
 } from '../core/ApiResponse';
 import { githubService } from '../service/github.service';
 import { getRateLimit } from '../helpers/getRateLimit';
+import { syncService } from '../service/sync.service';
 
 export const githubController = {
   async getProfile(req: Request, res: Response): Promise<void> {
@@ -50,7 +52,6 @@ export const githubController = {
         rateLimitInfo = undefined;
       }
 
-      // build response
       const response = new GitHubSuccessResponse<GitHubProfile>(
         'Github profile fetched successfully',
         profile,
@@ -566,5 +567,42 @@ export const getEvents = async (req: Request, res: Response): Promise<void> => {
       error: error.message,
       duration: `${duration}ms`,
     });
+  }
+};
+
+export const syncGitHubData = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const requestId = uuidv4();
+  const startTime = Date.now();
+
+  try {
+    Logger.info('Github data sync request started', requestId);
+    const syncResult = await syncService.syncAllUserData();
+
+    const response = new GitHubSuccessResponse<SyncResult>(
+      'Github data sync completed successfully',
+      syncResult,
+      false,
+      undefined,
+      requestId,
+      startTime,
+    );
+    response.send(res);
+  } catch (error: any) {
+    const duration = Date.now() - startTime;
+    Logger.error('Github data sync request failed', {
+      requestId,
+      error: error.message,
+      duration: `${duration}ms`,
+    });
+    const errorResponse = new GitHubErrorResponse(
+      'Failed to sync github data',
+      error.message,
+      undefined,
+      requestId,
+    );
+    errorResponse.send(res);
   }
 };
