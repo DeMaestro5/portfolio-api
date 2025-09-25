@@ -1,6 +1,6 @@
 import rateLimit from 'express-rate-limit';
 
-export const RateLimit = rateLimit({
+export const githubRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   message: {
@@ -9,9 +9,4 @@ export const RateLimit = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-});
-
-export const webhookRateLimit = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
 });
