@@ -210,4 +210,72 @@ export const projectsController = {
       return;
     }
   },
+
+  async getProjectsByLanguage(req: Request, res: Response): Promise<void> {
+    const requestId = uuidv4();
+    const startTime = Date.now();
+    const { language } = req.params;
+
+    try {
+      // validate language parameter
+      if (!language || language.trim() === '') {
+        const response = new GitHubErrorResponse(
+          '40000',
+          'Language parameter is required',
+        );
+        response.send(res);
+        return;
+      }
+
+      // check cache first
+      const cacheKey = `projects:language:${language}`;
+      let cachedProjects = await cacheService.get<Project[]>(cacheKey);
+      let cached = false;
+      let rateLimitInfo: { remaining: number; reset: string } | undefined;
+
+      if (!cachedProjects) {
+        // if not in cache, fetch from service
+        cachedProjects = await projectService.getProjectsByLanguage(language);
+        await cacheService.set(cacheKey, cachedProjects, 3600);
+        cached = false;
+        rateLimitInfo = await getRateLimit();
+      } else {
+        cached = true;
+        rateLimitInfo = undefined;
+      }
+
+      const response = new GitHubSuccessResponse(
+        'Projects fetched successfully',
+        cachedProjects,
+        cached,
+        rateLimitInfo,
+        requestId,
+        startTime,
+      );
+      response.send(res);
+
+      const duration = Date.now() - startTime;
+      Logger.info('Projects by language request completed', {
+        requestId,
+        cached,
+        duration: `${duration}ms`,
+      });
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      Logger.error('Projects by language request failed', {
+        requestId,
+        error: error.message,
+        duration: `${duration}ms`,
+      });
+
+      const errorResponse = new GitHubErrorResponse(
+        'Failed to fetch projects by language',
+        error.message,
+        undefined,
+        requestId,
+      );
+      errorResponse.send(res);
+      return;
+    }
+  },
 };
