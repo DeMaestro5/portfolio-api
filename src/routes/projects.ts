@@ -7,5 +7,6 @@ const router = Router();
 router.use(logGithubApiReq);
 
 router.get('/all-projects', RateLimit, projectsController.getProjects);
+router.get('/featured', RateLimit, projectsController.getFeaturedProjects);
 
 export default router;

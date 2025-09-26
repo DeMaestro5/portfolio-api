@@ -144,6 +144,18 @@ class CacheService {
       return null;
     }
   }
+
+  async clearProjectCache(): Promise<boolean> {
+    try {
+      await this.del('projects:all');
+      await this.del('projects:featured');
+      Logger.info('Project cache cleared');
+      return true;
+    } catch (error) {
+      Logger.error('Error clearing project cache', error);
+      return false;
+    }
+  }
 }
 
 export const cacheService = new CacheService();

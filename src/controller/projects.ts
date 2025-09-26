@@ -77,4 +77,68 @@ export const projectsController = {
       errorResponse.send(res);
     }
   },
+
+  async getFeaturedProjects(req: Request, res: Response): Promise<void> {
+    const requestId = uuidv4();
+    const startTime = Date.now();
+
+    try {
+      Logger.info('Featured projects request started', { requestId });
+      const isCacheHealthy = await cacheService.isHealthy();
+      if (!isCacheHealthy) {
+        throw new Error('Cache is not healthy');
+      }
+
+      await cacheService.clearProjectCache();
+
+      const cacheKey = 'projects:featured';
+      let featuredProjects = await cacheService.get<Project[]>(cacheKey);
+
+      let cached = false;
+      let rateLimitInfo: { remaining: number; reset: string } | undefined;
+
+      if (!featuredProjects) {
+        featuredProjects = await projectService.getFeaturedProjects();
+        await cacheService.set(cacheKey, featuredProjects, 3600);
+        cached = false;
+        rateLimitInfo = await getRateLimit();
+      } else {
+        cached = true;
+        rateLimitInfo = undefined;
+      }
+
+      const response = new GitHubSuccessResponse(
+        'Featured projects fetched successfully',
+        featuredProjects,
+        cached,
+        rateLimitInfo,
+        requestId,
+        startTime,
+      );
+      response.send(res);
+
+      const duration = Date.now() - startTime;
+      Logger.info('Featured projects request completed', {
+        requestId,
+        cached,
+        duration: `${duration}ms`,
+        projectCount: featuredProjects?.length,
+      });
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      Logger.error('Featured projects request failed', {
+        requestId,
+        error: error.message,
+        duration: `${duration}ms`,
+      });
+
+      const errorResponse = new GitHubErrorResponse(
+        'Failed to fetch featured projects',
+        error.message,
+        undefined,
+        requestId,
+      );
+      errorResponse.send(res);
+    }
+  },
 };
