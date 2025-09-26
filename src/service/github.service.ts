@@ -632,6 +632,27 @@ class GitHubService {
       throw error;
     }
   }
+
+  async fetchRepositoriesByLanguage(
+    language: string,
+  ): Promise<GitHubRepository[]> {
+    try {
+      Logger.info('Fetching repositories by language', { language });
+      const repositories = await this.fetchRepositories();
+      const filteredRepos = repositories.filter(
+        (repo) =>
+          repo.language &&
+          repo.language.toLowerCase() === language.toLowerCase(),
+      );
+      Logger.info('Github repositories fetched successfully', {
+        repositories: filteredRepos.length,
+      });
+      return filteredRepos;
+    } catch (error) {
+      Logger.error('Failed to fetch repositories by language', error);
+      throw error;
+    }
+  }
 }
 
 export const githubService = new GitHubService();

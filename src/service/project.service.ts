@@ -266,6 +266,47 @@ class ProjectService {
       throw error;
     }
   }
+
+  public async getProjectsByLanguage(language: string): Promise<Project[]> {
+    try {
+      Logger.info('Fetching projects by language', { language });
+      const repositories =
+        await githubService.fetchRepositoriesByLanguage(language);
+
+      if (repositories.length === 0) {
+        Logger.info('No repositories found for language', { language });
+        return [];
+      }
+
+      const filteredRepos = this.filterRepositories(repositories);
+
+      const projects: Project[] = filteredRepos.map((repo) => ({
+        id: repo.id,
+        name: repo.name,
+        description: repo.description,
+        html_url: repo.html_url,
+        language: repo.language,
+        stargazers_count: repo.stargazers_count,
+        forks_count: repo.forks_count,
+        created_at: repo.created_at,
+        updated_at: repo.updated_at,
+        pushed_at: repo.pushed_at,
+        topics: repo.topics,
+        categories: this.determineCategories(repo),
+        status: this.determineStatus(repo),
+        featured: this.determineFeatured(repo),
+        technologies: this.determineTechnologies(repo),
+      }));
+
+      Logger.info('Projects fetched successfully', {
+        projects: projects.length,
+      });
+      return projects;
+    } catch (error) {
+      Logger.error('Error fetching projects by language', error);
+      throw error;
+    }
+  }
 }
 
 export const projectService = new ProjectService();
