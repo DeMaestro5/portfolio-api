@@ -149,6 +149,8 @@ class CacheService {
     try {
       await this.del('projects:all');
       await this.del('projects:featured');
+      await this.del('projects:search');
+
       Logger.info('Project cache cleared');
       return true;
     } catch (error) {
