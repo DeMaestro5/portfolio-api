@@ -15,39 +15,10 @@ class ProjectService {
       const repositories = await githubService.fetchRepositories();
       Logger.info(`Fetched ${repositories.length} repositories from GitHub`);
 
-      // DEBUG: Log some repository details
-      if (repositories.length > 0) {
-        Logger.info('Sample repository:', {
-          name: repositories[0].name,
-          is_private: repositories[0].is_private,
-          description: repositories[0].description,
-          stargazers_count: repositories[0].stargazers_count,
-          topics: repositories[0].topics,
-        });
-      }
-
       // filter repositories to only include projects
       const projectRepos = this.filterRepositories(repositories);
       Logger.info(`Filtered to ${projectRepos.length} projects repository`);
 
-      // DEBUG: Log why repositories might be filtered out
-      if (repositories.length > 0 && projectRepos.length === 0) {
-        Logger.warn('All repositories were filtered out. Checking criteria:');
-        repositories.slice(0, 3).forEach((repo, index) => {
-          Logger.warn(`Repo ${index + 1} (${repo.name}):`, {
-            is_private: repo.is_private,
-            has_fork_in_name: repo.name.includes('fork'),
-            has_description: !!repo.description,
-            stargazers_count: repo.stargazers_count,
-            passes_criteria:
-              !repo.is_private &&
-              !repo.name.includes('fork') &&
-              repo.description &&
-              repo.stargazers_count &&
-              repo.stargazers_count > 0,
-          });
-        });
-      }
       // transform repositories to projects
       const projects = projectRepos.map((repo) =>
         this.mapRepositoryToProject(repo),
@@ -64,19 +35,7 @@ class ProjectService {
     repositories: GitHubRepository[],
   ): GitHubRepository[] {
     return repositories.filter((repo) => {
-      // DEBUG: Log all repositories first
-      Logger.info(
-        'All repositories:',
-        repositories.map((repo) => ({
-          name: repo.name,
-          is_private: repo.is_private,
-          description: repo.description,
-          stargazers_count: repo.stargazers_count,
-          topics: repo.topics,
-        })),
-      );
-
-      //filter criteria
+      // filter out private repositories and forks
       return !repo.is_private && !repo.name.includes('fork');
     });
   }
@@ -212,9 +171,9 @@ class ProjectService {
 
   private determineFeatured(repo: GitHubRepository): boolean {
     // Featured criteria
-    const hasStars = repo.stargazers_count && repo.stargazers_count > 5;
-    const hasForks = repo.forks_count && repo.forks_count > 2;
-    const hasDescription = repo.description && repo.description.length > 20;
+    const hasStars = repo.stargazers_count && repo.stargazers_count > 0;
+    const hasForks = repo.forks_count && repo.forks_count > 0;
+    const hasDescription = repo.description && repo.description.length > 5;
     const hasTopics = repo.topics && repo.topics.length > 0;
     const isRecent =
       repo.pushed_at &&
@@ -224,7 +183,7 @@ class ProjectService {
     // Featured if it meets multiple criteria
     const criteria = [hasStars, hasForks, hasDescription, hasTopics, isRecent];
     const metCriteria = criteria.filter(Boolean).length;
-    return metCriteria >= 3;
+    return metCriteria >= 1;
   }
 
   private determineTechnologies(repo: GitHubRepository): string[] {
@@ -252,6 +211,19 @@ class ProjectService {
     }
     //remove duplicates
     return Array.from(new Set(technologies));
+  }
+
+  public async getFeaturedProjects(): Promise<Project[]> {
+    try {
+      Logger.info('Fetching featured projects');
+      const projects = await this.getAllProjects();
+      const featuredProjects = projects.filter((project) => project.featured);
+      Logger.info(`Found ${featuredProjects.length} featured projects`);
+      return featuredProjects;
+    } catch (error) {
+      Logger.error('Error fetching featured projects', error);
+      throw error;
+    }
   }
 }
 
