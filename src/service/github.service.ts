@@ -587,6 +587,51 @@ class GitHubService {
       return 0;
     }
   }
+
+  async fetchRepositoryById(id: number): Promise<GitHubRepository> {
+    try {
+      Logger.info('Fetching GitHub repository by id', { id });
+      // fetch all repositories to find the one with the matching id
+      const repositories = await this.fetchRepositories();
+      const repository = repositories.find((repo) => repo.id === id);
+
+      if (!repository) {
+        throw new Error(`Repository with id ${id} not found`);
+      }
+      // get detailed information about the repository
+      const [owner, repo] = repository.full_name.split('/');
+      const response = await this.octokit.rest.repos.get({
+        owner,
+        repo,
+      });
+
+      const detailedRepository: GitHubRepository = {
+        id: response.data.id,
+        name: response.data.name,
+        full_name: response.data.full_name,
+        description: response.data.description,
+        language: response.data.language,
+        stargazers_count: response.data.stargazers_count,
+        forks_count: response.data.forks_count,
+        size: response.data.size,
+        created_at: response.data.created_at,
+        updated_at: response.data.updated_at,
+        pushed_at: response.data.pushed_at,
+        html_url: response.data.html_url,
+        clone_url: response.data.clone_url,
+        topics: response.data.topics,
+        is_private: response.data.private,
+      };
+      Logger.info('Github repository fetched successfully', {
+        id,
+        name: detailedRepository.name,
+      });
+      return detailedRepository;
+    } catch (error) {
+      Logger.error('Failed to fetch GitHub repository by id', error);
+      throw error;
+    }
+  }
 }
 
 export const githubService = new GitHubService();

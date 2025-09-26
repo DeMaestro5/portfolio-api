@@ -8,5 +8,6 @@ router.use(logGithubApiReq);
 
 router.get('/all-projects', RateLimit, projectsController.getProjects);
 router.get('/featured', RateLimit, projectsController.getFeaturedProjects);
+router.get('/:id', RateLimit, projectsController.getProjectById);
 
 export default router;
