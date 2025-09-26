@@ -225,6 +225,47 @@ class ProjectService {
       throw error;
     }
   }
+
+  public async getProjectById(id: number): Promise<Project> {
+    try {
+      Logger.info('Fetching project by id', { id });
+
+      const repository = await githubService.fetchRepositoryById(id);
+      //check if it passes the filtering criteria
+      if (this.filterRepositories([repository]).length === 0) {
+        throw new Error(
+          `Project with ID ${id} does not meet the filtering criteria`,
+        );
+      }
+      // transform to project object
+      const project: Project = {
+        id: repository.id,
+        name: repository.name,
+        description: repository.description,
+        html_url: repository.html_url,
+        language: repository.language,
+        stargazers_count: repository.stargazers_count,
+        forks_count: repository.forks_count,
+        created_at: repository.created_at,
+        updated_at: repository.updated_at,
+        pushed_at: repository.pushed_at,
+        topics: repository.topics,
+        categories: this.determineCategories(repository),
+        status: this.determineStatus(repository),
+        featured: this.determineFeatured(repository),
+        technologies: this.determineTechnologies(repository),
+      };
+
+      Logger.info('Project fetched successfully', {
+        id,
+        name: project.name,
+      });
+      return project;
+    } catch (error) {
+      Logger.error('Error fetching project by id', error);
+      throw error;
+    }
+  }
 }
 
 export const projectService = new ProjectService();
