@@ -213,7 +213,7 @@ export class SuccessResponse<T> extends ApiResponse {
     return super.prepare<SuccessResponse<T>>(res, this, headers);
   }
 }
-export class GitHubSuccessResponse<T> extends SuccessResponse<T> {
+export class PortfolioSuccessResponse<T> extends SuccessResponse<T> {
   constructor(
     message: string,
     data: T,
@@ -276,7 +276,7 @@ export const ApiResponses = {
       requestId?: string,
       startTime?: number,
     ) => {
-      return new GitHubSuccessResponse(
+      return new PortfolioSuccessResponse(
         message,
         data,
         cached,

@@ -28,3 +28,19 @@ export interface LanguageMetricsResponse {
   requestId: string;
   startTime: number;
 }
+
+export type ActivityType =
+  | 'recent'
+  | 'monthly'
+  | 'project'
+  | 'technology'
+  | 'commit'
+  | 'deployment';
+
+export interface ActivityMetric {
+  type: ActivityType;
+  period: string;
+  count: number;
+  projects: string[];
+  details: Record<string, any>;
+}
