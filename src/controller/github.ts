@@ -17,7 +17,7 @@ import {
 } from '../types/github.types';
 import {
   GitHubErrorResponse,
-  GitHubSuccessResponse,
+  PortfolioSuccessResponse,
 } from '../core/ApiResponse';
 import { githubService } from '../service/github.service';
 import { getRateLimit } from '../helpers/getRateLimit';
@@ -54,7 +54,7 @@ export const githubController = {
         rateLimitInfo = undefined;
       }
 
-      const response = new GitHubSuccessResponse<GitHubProfile>(
+      const response = new PortfolioSuccessResponse<GitHubProfile>(
         'Github profile fetched successfully',
         profile,
         cached,
@@ -114,7 +114,7 @@ export const getOverview = async (
       cached = true;
     }
 
-    const response = new GitHubSuccessResponse<GitHubOverview>(
+    const response = new PortfolioSuccessResponse<GitHubOverview>(
       'Github overview fetched successfully',
       overview,
       cached,
@@ -180,7 +180,7 @@ export const getActivities = async (
       lastUpdated: new Date().toISOString(),
     };
 
-    const response = new GitHubSuccessResponse<ActivityFeed>(
+    const response = new PortfolioSuccessResponse<ActivityFeed>(
       'Github activities fetched successfully',
       activityFeed,
       cached,
@@ -240,7 +240,7 @@ export const getRepositories = async (
       rateLimitInfo = undefined;
     }
 
-    const response = new GitHubSuccessResponse<GitHubRepository[]>(
+    const response = new PortfolioSuccessResponse<GitHubRepository[]>(
       'Github repositories fetched successfully',
       repositories,
       cached,
@@ -301,7 +301,7 @@ export const getRepositoryByName = async (
       rateLimitInfo = undefined;
     }
 
-    const response = new GitHubSuccessResponse<GitHubRepository>(
+    const response = new PortfolioSuccessResponse<GitHubRepository>(
       'Github repository fetched successfully',
       repository,
       cached,
@@ -357,7 +357,7 @@ export const getStats = async (req: Request, res: Response): Promise<void> => {
       rateLimitInfo = undefined;
     }
 
-    const response = new GitHubSuccessResponse<GitHubStats>(
+    const response = new PortfolioSuccessResponse<GitHubStats>(
       'Github stats fetched successfully',
       stats,
       cached,
@@ -397,7 +397,7 @@ export const getRepositoryCommits = async (
       rateLimitInfo = undefined;
     }
 
-    const response = new GitHubSuccessResponse<GitHubCommit[]>(
+    const response = new PortfolioSuccessResponse<GitHubCommit[]>(
       'Github repository commits fetched successfully',
       commits,
       cached,
@@ -440,7 +440,7 @@ export const getRepositoryLanguages = async (
       rateLimitInfo = undefined;
     }
 
-    const response = new GitHubSuccessResponse<GitHubLanguage[]>(
+    const response = new PortfolioSuccessResponse<GitHubLanguage[]>(
       'Github repository languages fetched successfully',
       languages,
       cached,
@@ -491,7 +491,7 @@ export const getRepositoryContributors = async (
       rateLimitInfo = undefined;
     }
 
-    const response = new GitHubSuccessResponse<GitHubContributor[]>(
+    const response = new PortfolioSuccessResponse<GitHubContributor[]>(
       'Github repository contributors fetched successfully',
       contributors,
       cached,
@@ -546,7 +546,7 @@ export const getEvents = async (req: Request, res: Response): Promise<void> => {
       rateLimitInfo = undefined;
     }
 
-    const response = new GitHubSuccessResponse<GitHubEvents[]>(
+    const response = new PortfolioSuccessResponse<GitHubEvents[]>(
       'Github events fetched successfully',
       events,
       cached,
@@ -583,7 +583,7 @@ export const syncGitHubData = async (
     Logger.info('Github data sync request started', requestId);
     const syncResult = await syncService.syncAllUserData();
 
-    const response = new GitHubSuccessResponse<SyncResult>(
+    const response = new PortfolioSuccessResponse<SyncResult>(
       'Github data sync completed successfully',
       syncResult,
       false,

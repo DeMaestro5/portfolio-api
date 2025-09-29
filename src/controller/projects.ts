@@ -6,7 +6,7 @@ import { cacheService } from '../service/cache.service';
 import { Project } from '../types/project.types';
 import { getRateLimit } from '../helpers/getRateLimit';
 import {
-  GitHubSuccessResponse,
+  PortfolioSuccessResponse,
   GitHubErrorResponse,
 } from '../core/ApiResponse';
 
@@ -42,7 +42,7 @@ export const projectsController = {
         rateLimitInfo = undefined;
       }
 
-      const response = new GitHubSuccessResponse(
+      const response = new PortfolioSuccessResponse(
         'Projects fetched successfully',
         projects,
         cached,
@@ -107,7 +107,7 @@ export const projectsController = {
         rateLimitInfo = undefined;
       }
 
-      const response = new GitHubSuccessResponse(
+      const response = new PortfolioSuccessResponse(
         'Featured projects fetched successfully',
         featuredProjects,
         cached,
@@ -176,7 +176,7 @@ export const projectsController = {
         rateLimitInfo = undefined;
       }
 
-      const response = new GitHubSuccessResponse(
+      const response = new PortfolioSuccessResponse(
         'Project fetched successfully',
         cachedProject,
         cached,
@@ -244,7 +244,7 @@ export const projectsController = {
         rateLimitInfo = undefined;
       }
 
-      const response = new GitHubSuccessResponse(
+      const response = new PortfolioSuccessResponse(
         'Projects fetched successfully',
         cachedProjects,
         cached,
@@ -339,7 +339,7 @@ export const projectsController = {
         rateLimitInfo = undefined;
       }
 
-      const response = new GitHubSuccessResponse(
+      const response = new PortfolioSuccessResponse(
         'Projects search request completed',
         searchResults,
         cached,
