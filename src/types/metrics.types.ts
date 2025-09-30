@@ -63,3 +63,32 @@ export interface CommitSummary {
   averageCommitsPerRepository: number;
   recentCommits: GitHubCommit[];
 }
+
+export interface RepositoryMetric {
+  name: string;
+  description: string | null;
+  url: string | null;
+  stars: number | null;
+  forks: number;
+  size: number;
+  createdAt: string;
+  updatedAt: string;
+  lastPushed: string;
+  topics: string[];
+  isPrivate: boolean;
+  activityScore: number;
+}
+
+export interface RepositorySummary {
+  totalRepositories: number;
+  publicRepositories: number;
+  privateRepositories: number;
+  mostStarredRepository: string;
+  mostStarredRepositoryStars: number;
+  averageStarsPerRepository: number;
+  totalStars: number;
+  totalForks: number;
+  mostUsedLanguage: string;
+  languageDistribution: { [language: string]: number };
+  recentRepositories: RepositoryMetric[];
+}
