@@ -659,12 +659,16 @@ class GitHubService {
     daysBack: number = 365,
   ): Promise<GitHubCommit[]> {
     try {
-      const commitPromises = repositories.map(async (repo) => {
+      const repositoriesWithCommits = repositories.filter(
+        (repo) => (repo.size && repo.size > 0) || repo.pushed_at,
+      );
+
+      const commitPromises = repositoriesWithCommits.map(async (repo) => {
         try {
           const response = await this.octokit.rest.repos.listCommits({
             owner: repo.full_name.split('/')[0],
             repo: repo.full_name.split('/')[1],
-            per_page: 100, // GitHub's max per page
+            per_page: 100,
             since: new Date(
               Date.now() - daysBack * 24 * 60 * 60 * 1000,
             ).toISOString(),
