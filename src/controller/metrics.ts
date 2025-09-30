@@ -3,7 +3,10 @@ import Logger from '../core/Logger';
 import {
   ActivityMetric,
   CommitMetric,
+  CommitSummary,
   LanguageMetric,
+  RepositoryMetric,
+  RepositorySummary,
 } from '../types/metrics.types';
 import { cacheService } from '../service/cache.service';
 import { metricsService } from '../service/metrics.service';
@@ -133,7 +136,10 @@ export const MetricsController = {
       Logger.info('Commit request started', { requestId });
 
       const cacheKey = 'metrics:commit';
-      let commitMetrics = await cacheService.get<CommitMetric[]>(cacheKey);
+      let commitMetrics = await cacheService.get<{
+        commitMetrics: CommitMetric[];
+        commitSummary: CommitSummary;
+      }>(cacheKey);
       let cached = false;
       let rateLimitInfo: { remaining: number; reset: string } | undefined;
 
@@ -177,6 +183,56 @@ export const MetricsController = {
         requestId,
       );
       errorResponse.send(res);
+    }
+  },
+
+  async getRepositoriesMetrics(req: Request, res: Response): Promise<void> {
+    const requestId = uuidV4();
+    const startTime = Date.now();
+
+    try {
+      Logger.info('Repositories request started', { requestId });
+
+      const cacheKey = 'metrics:repositories';
+      let repositoriesMetrics = await cacheService.get<{
+        repositories: RepositoryMetric[];
+        summary: RepositorySummary;
+      }>(cacheKey);
+      let cached = false;
+      let rateLimitInfo: { remaining: number; reset: string } | undefined;
+
+      if (!repositoriesMetrics) {
+        repositoriesMetrics = await metricsService.getRepositoriesMetrics();
+        await cacheService.set(cacheKey, repositoriesMetrics, 60 * 60 * 24);
+        cached = false;
+      } else {
+        cached = true;
+        rateLimitInfo = undefined;
+      }
+
+      const response = new PortfolioSuccessResponse(
+        'Repositories metrics fetched successfully',
+        repositoriesMetrics,
+        cached,
+        rateLimitInfo,
+        requestId,
+        startTime,
+      );
+      response.send(res);
+
+      const duration = Date.now() - startTime;
+      Logger.info('Repositories request completed', {
+        requestId,
+        cached,
+        duration: `${duration}ms`,
+      });
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      Logger.error('Repositories request failed', {
+        requestId,
+        error: error.message,
+        duration: `${duration}ms`,
+      });
     }
   },
 };

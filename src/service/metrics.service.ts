@@ -1,10 +1,13 @@
 import Logger from '../core/Logger';
-import { GitHubCommit } from '../types/github.types';
+import { GitHubCommit, GitHubRepository } from '../types/github.types';
 import {
   ActivityMetric,
   ActivityType,
   CommitMetric,
+  CommitSummary,
   LanguageMetric,
+  RepositoryMetric,
+  RepositorySummary,
 } from '../types/metrics.types';
 import { Project } from '../types/project.types';
 import { githubService } from './github.service';
@@ -215,7 +218,10 @@ class MetricsService {
     };
   }
 
-  async getCommitActivity(): Promise<CommitMetric[]> {
+  async getCommitActivity(): Promise<{
+    commitMetrics: CommitMetric[];
+    commitSummary: CommitSummary;
+  }> {
     try {
       Logger.info('Fetching commit activity metrics');
 
@@ -243,11 +249,135 @@ class MetricsService {
         }))
         .sort((a, b) => b.commitCount - a.commitCount);
 
-      return commitMetrics;
+      const commitSummary: CommitSummary = {
+        totalCommits: commits.length,
+        totalRepositories: repositories.length,
+        mostActiveRepository: commitMetrics[0]?.repository || '',
+        mostActiveRepositoryCount: commitMetrics[0]?.commitCount || 0,
+        averageCommitsPerRepository:
+          repositories.length > 0
+            ? Math.round(commits.length / repositories.length)
+            : 0,
+        recentCommits: commits.slice(0, 5),
+      };
+
+      return {
+        commitMetrics,
+        commitSummary,
+      };
     } catch (error) {
       Logger.error('Error fetching commit activity metrics:', error);
       throw error;
     }
+  }
+
+  async getRepositoriesMetrics(): Promise<{
+    repositories: RepositoryMetric[];
+    summary: RepositorySummary;
+  }> {
+    try {
+      Logger.info('Fetching repositories metrics');
+      const repositories = await githubService.fetchRepositories();
+      const repositoryMetrics = repositories
+        .map((repository) => this.transformRepository(repository))
+        .sort((a, b) => (b.stars || 0) - (a.stars || 0));
+
+      const summary = await this.getRepositoriesSummary(
+        repositories,
+        repositoryMetrics,
+      );
+
+      return {
+        repositories: repositoryMetrics,
+        summary,
+      };
+    } catch (error) {
+      Logger.error('Error fetching repositories metrics:', error);
+      throw error;
+    }
+  }
+
+  private calculateActivityScore(repository: GitHubRepository): number {
+    let score = 0;
+
+    if (repository.updated_at) {
+      const daysSinceUpdate =
+        (Date.now() - new Date(repository.updated_at).getTime()) /
+        (1000 * 60 * 60 * 24);
+      score += Math.max(0, 30 - daysSinceUpdate);
+    }
+    score += (repository.stargazers_count || 0) * 2;
+    score += (repository.forks_count || 0) * 3;
+
+    return Math.round(score);
+  }
+  private async getRepositoriesSummary(
+    repositories: GitHubRepository[],
+    repositoryMetrics: RepositoryMetric[],
+  ): Promise<RepositorySummary> {
+    try {
+      // Calculate language distribution
+      const languageMap = new Map<string, number>();
+      repositories.forEach((repo) => {
+        if (repo.language) {
+          languageMap.set(repo.name, (languageMap.get(repo.name) || 0) + 1);
+        }
+      });
+
+      const totalStars = repositories.reduce(
+        (sum, repo) => sum + (repo.stargazers_count || 0),
+        0,
+      );
+      const totalForks = repositories.reduce(
+        (sum, repo) => sum + (repo.forks_count || 0),
+        0,
+      );
+
+      const sortedByStars = [...repositories].sort(
+        (a, b) => (b.stargazers_count || 0) - (a.stargazers_count || 0),
+      );
+
+      return {
+        totalRepositories: repositoryMetrics.length,
+        publicRepositories: repositoryMetrics.filter((r) => !r.isPrivate)
+          .length,
+        privateRepositories: repositoryMetrics.filter((r) => r.isPrivate)
+          .length,
+        mostStarredRepository: sortedByStars[0]?.name || '',
+        mostStarredRepositoryStars: sortedByStars[0]?.stargazers_count || 0,
+        averageStarsPerRepository:
+          repositories.length > 0
+            ? Math.round(totalStars / repositories.length)
+            : 0,
+        totalStars,
+        totalForks,
+        mostUsedLanguage:
+          Array.from(languageMap.entries()).sort(
+            (a, b) => b[1] - a[1],
+          )[0]?.[0] || 'None',
+        languageDistribution: Object.fromEntries(languageMap),
+        recentRepositories: repositoryMetrics.slice(0, 5),
+      };
+    } catch (error) {
+      Logger.error('Error fetching repository summary:', error);
+      throw error;
+    }
+  }
+  private transformRepository(repository: GitHubRepository): RepositoryMetric {
+    return {
+      name: repository.name,
+      description: repository.description,
+      url: repository.html_url || null,
+      stars: repository.stargazers_count || 0,
+      forks: repository.forks_count || 0,
+      size: repository.size || 0,
+      createdAt: repository.created_at || '',
+      updatedAt: repository.updated_at || '',
+      lastPushed: repository.pushed_at || '',
+      topics: repository.topics || [],
+      isPrivate: repository.is_private,
+      activityScore: this.calculateActivityScore(repository),
+    };
   }
 }
 
