@@ -116,3 +116,17 @@ export interface ContributionsData {
   repositories: RepositoryContribution[];
   summary: ContributionsSummary;
 }
+
+export interface ProductivityMetrics {
+  totalCommits: number;
+  totalRepositories: number;
+  mostActiveRepository: string;
+  mostActiveRepositoryCount: number;
+  averageCommitsPerRepository: number;
+  recentCommits: GitHubCommit[];
+
+  commitsThisWeek: number;
+  commitsThisMonth: number;
+  lastActivityDate: string;
+  activeDaysThisMonth: number;
+}

@@ -6,6 +6,7 @@ import {
   CommitSummary,
   ContributionsData,
   LanguageMetric,
+  ProductivityMetrics,
   RepositoryMetric,
   RepositorySummary,
 } from '../types/metrics.types';
@@ -290,6 +291,54 @@ export const MetricsController = {
         requestId,
       );
       errorResponse.send(res);
+    }
+  },
+
+  async getProductivityMetrics(req: Request, res: Response): Promise<void> {
+    const requestId = uuidV4();
+    const startTime = Date.now();
+
+    try {
+      Logger.info('Productivity request started', { requestId });
+
+      const cacheKey = 'metrics:productivity';
+      let productivityMetrics =
+        await cacheService.get<ProductivityMetrics>(cacheKey);
+      let cached = false;
+      let rateLimitInfo: { remaining: number; reset: string } | undefined;
+
+      if (!productivityMetrics) {
+        productivityMetrics = await metricsService.getProductivityMetrics();
+        await cacheService.set(cacheKey, productivityMetrics, 60 * 60 * 24);
+        cached = false;
+      } else {
+        cached = true;
+        rateLimitInfo = undefined;
+      }
+
+      const response = new PortfolioSuccessResponse(
+        'Productivity metrics fetched successfully',
+        productivityMetrics,
+        cached,
+        rateLimitInfo,
+        requestId,
+        startTime,
+      );
+      response.send(res);
+
+      const duration = Date.now() - startTime;
+      Logger.info('Productivity request completed', {
+        requestId,
+        cached,
+        duration: `${duration}ms`,
+      });
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      Logger.error('Productivity request failed', {
+        requestId,
+        error: error.message,
+        duration: `${duration}ms`,
+      });
     }
   },
 };
