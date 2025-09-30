@@ -6,5 +6,6 @@ const router = Router();
 
 router.get('/languages', RateLimit, MetricsController.getLanguagesMetrics);
 router.get('/activities', RateLimit, MetricsController.getActivityMetrics);
+router.get('/commits', RateLimit, MetricsController.getCommitMetrics);
 
 export default router;

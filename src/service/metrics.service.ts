@@ -1,10 +1,13 @@
 import Logger from '../core/Logger';
+import { GitHubCommit } from '../types/github.types';
 import {
   ActivityMetric,
   ActivityType,
+  CommitMetric,
   LanguageMetric,
 } from '../types/metrics.types';
 import { Project } from '../types/project.types';
+import { githubService } from './github.service';
 import { projectService } from './project.service';
 
 class MetricsService {
@@ -210,6 +213,41 @@ class MetricsService {
             : 0,
       },
     };
+  }
+
+  async getCommitActivity(): Promise<CommitMetric[]> {
+    try {
+      Logger.info('Fetching commit activity metrics');
+
+      const repositories = await githubService.fetchRepositories();
+
+      const commits = await githubService.fetchRecentCommits(repositories);
+
+      const commitMap = new Map<string, GitHubCommit[]>();
+
+      commits.forEach((commit) => {
+        const repoName = commit.repository.name;
+        if (!commitMap.has(repoName)) {
+          commitMap.set(repoName, []);
+        }
+        commitMap.get(repoName)!.push(commit);
+      });
+
+      const commitMetrics: CommitMetric[] = Array.from(commitMap.entries())
+        .map(([repoName, repoCommits]) => ({
+          repository: repoName,
+          commitCount: repoCommits.length,
+          lastCommit: repoCommits[0]?.author.date || '',
+          authors: [...new Set(repoCommits.map((c) => c.author.name))],
+          messages: repoCommits.map((c) => c.message),
+        }))
+        .sort((a, b) => b.commitCount - a.commitCount);
+
+      return commitMetrics;
+    } catch (error) {
+      Logger.error('Error fetching commit activity metrics:', error);
+      throw error;
+    }
   }
 }
 

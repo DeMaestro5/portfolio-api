@@ -1,3 +1,5 @@
+import { GitHubCommit } from './github.types';
+
 export interface LanguageMetric {
   name: string;
   count: number;
@@ -43,4 +45,21 @@ export interface ActivityMetric {
   count: number;
   projects: string[];
   details: Record<string, any>;
+}
+
+export interface CommitMetric {
+  repository: string;
+  commitCount: number;
+  lastCommit: string;
+  authors: string[];
+  messages: string[];
+}
+
+export interface CommitSummary {
+  totalCommits: number;
+  totalRepositories: number;
+  mostActiveRepository: string;
+  mostActiveRepositoryCount: number;
+  averageCommitsPerRepository: number;
+  recentCommits: GitHubCommit[];
 }
