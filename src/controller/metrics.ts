@@ -1,6 +1,10 @@
 import { Request, Response } from 'express';
 import Logger from '../core/Logger';
-import { ActivityMetric, LanguageMetric } from '../types/metrics.types';
+import {
+  ActivityMetric,
+  CommitMetric,
+  LanguageMetric,
+} from '../types/metrics.types';
 import { cacheService } from '../service/cache.service';
 import { metricsService } from '../service/metrics.service';
 import {
@@ -113,6 +117,61 @@ export const MetricsController = {
 
       const errorResponse = new GitHubErrorResponse(
         'Failed to fetch activity metrics',
+        error.message,
+        undefined,
+        requestId,
+      );
+      errorResponse.send(res);
+    }
+  },
+
+  async getCommitMetrics(req: Request, res: Response): Promise<void> {
+    const requestId = uuidV4();
+    const startTime = Date.now();
+
+    try {
+      Logger.info('Commit request started', { requestId });
+
+      const cacheKey = 'metrics:commit';
+      let commitMetrics = await cacheService.get<CommitMetric[]>(cacheKey);
+      let cached = false;
+      let rateLimitInfo: { remaining: number; reset: string } | undefined;
+
+      if (!commitMetrics) {
+        commitMetrics = await metricsService.getCommitActivity();
+        await cacheService.set(cacheKey, commitMetrics, 60 * 60 * 24);
+        cached = false;
+      } else {
+        cached = true;
+        rateLimitInfo = undefined;
+      }
+
+      const response = new PortfolioSuccessResponse(
+        'Commit metrics fetched successfully',
+        commitMetrics,
+        cached,
+        rateLimitInfo,
+        requestId,
+        startTime,
+      );
+      response.send(res);
+
+      const duration = Date.now() - startTime;
+      Logger.info('Commit request completed', {
+        requestId,
+        cached,
+        duration: `${duration}ms`,
+      });
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      Logger.error('Commit request failed', {
+        requestId,
+        error: error.message,
+        duration: `${duration}ms`,
+      });
+
+      const errorResponse = new GitHubErrorResponse(
+        'Failed to fetch commit metrics',
         error.message,
         undefined,
         requestId,
