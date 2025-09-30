@@ -92,3 +92,27 @@ export interface RepositorySummary {
   languageDistribution: { [language: string]: number };
   recentRepositories: RepositoryMetric[];
 }
+
+export interface RepositoryContribution {
+  repository: string;
+  contributionCount: number;
+  lastContribution: string;
+  authors: string[];
+  recentCommits: GitHubCommit[];
+}
+
+export interface ContributionsSummary {
+  totalContributions: number;
+  totalRepositories: number;
+  mostContributedRepository: string;
+  mostContributedRepositoryContributions: number;
+  averageContributionsPerRepository: number;
+  totalAuthors: number;
+  mostActiveAuthor: string;
+  recentContributions: GitHubCommit[];
+}
+
+export interface ContributionsData {
+  repositories: RepositoryContribution[];
+  summary: ContributionsSummary;
+}

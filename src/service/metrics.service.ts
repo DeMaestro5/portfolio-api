@@ -5,7 +5,10 @@ import {
   ActivityType,
   CommitMetric,
   CommitSummary,
+  ContributionsData,
+  ContributionsSummary,
   LanguageMetric,
+  RepositoryContribution,
   RepositoryMetric,
   RepositorySummary,
 } from '../types/metrics.types';
@@ -377,6 +380,90 @@ class MetricsService {
       topics: repository.topics || [],
       isPrivate: repository.is_private,
       activityScore: this.calculateActivityScore(repository),
+    };
+  }
+
+  async getContributionsMetrics(): Promise<ContributionsData> {
+    try {
+      Logger.info('Fetching contributions metrics');
+      const repositories = await githubService.fetchRepositories();
+      const commits = await githubService.fetchRecentCommits(repositories);
+
+      const commitMap = new Map<string, GitHubCommit[]>();
+
+      commits.forEach((commit) => {
+        const repoName = commit.repository.name;
+        if (!commitMap.has(repoName)) {
+          commitMap.set(repoName, []);
+        }
+        commitMap.get(repoName)!.push(commit);
+      });
+
+      const repositoryContributions: RepositoryContribution[] = Array.from(
+        commitMap.entries(),
+      )
+        .map(([repoName, repoCommits]) => ({
+          repository: repoName,
+          contributionCount: repoCommits.length,
+          lastContribution: repoCommits[0]?.author.date || '',
+          authors: [...new Set(repoCommits.map((c) => c.author.name))],
+          recentCommits: repoCommits.slice(0, 3),
+        }))
+        .sort((a, b) => b.contributionCount - a.contributionCount);
+
+      const summary = this.calculateContributionsSummary(
+        commits,
+        repositoryContributions,
+      );
+
+      return {
+        repositories: repositoryContributions,
+        summary,
+      };
+    } catch (error) {
+      Logger.error('Error fetching contributions metrics:', error);
+      throw error;
+    }
+  }
+  private calculateContributionsSummary(
+    commits: GitHubCommit[],
+    repositoryContributions: RepositoryContribution[],
+  ): ContributionsSummary {
+    const totalContributions = commits.length;
+    const totalRepositories = repositoryContributions.length;
+    const totalAuthors = [...new Set(commits.map((c) => c.author.name))].length;
+
+    const mostContributedRepository = repositoryContributions[0] || {
+      repository: 'Unknown',
+      contributionCount: 0,
+      lastContribution: '',
+      authors: [],
+      recentCommits: [],
+    };
+
+    const authorMap = new Map<string, number>();
+    commits.forEach((commit) => {
+      const authorName = commit.author.name;
+      authorMap.set(authorName, (authorMap.get(authorName) || 0) + 1);
+    });
+
+    const mostActiveAuthor =
+      Array.from(authorMap.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+      'Unknown';
+
+    return {
+      totalContributions,
+      totalRepositories,
+      totalAuthors,
+      mostActiveAuthor,
+      mostContributedRepository: mostContributedRepository.repository,
+      mostContributedRepositoryContributions:
+        mostContributedRepository.contributionCount,
+      averageContributionsPerRepository:
+        totalRepositories > 0
+          ? Math.round(totalContributions / totalRepositories)
+          : 0,
+      recentContributions: commits.slice(0, 5),
     };
   }
 }

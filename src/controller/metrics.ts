@@ -4,6 +4,7 @@ import {
   ActivityMetric,
   CommitMetric,
   CommitSummary,
+  ContributionsData,
   LanguageMetric,
   RepositoryMetric,
   RepositorySummary,
@@ -233,6 +234,62 @@ export const MetricsController = {
         error: error.message,
         duration: `${duration}ms`,
       });
+    }
+  },
+
+  async getContributionsMetrics(req: Request, res: Response): Promise<void> {
+    const requestId = uuidV4();
+    const startTime = Date.now();
+
+    try {
+      Logger.info('Contributions request started', { requestId });
+
+      const cacheKey = 'metrics:contributions';
+      let contributionsMetrics =
+        await cacheService.get<ContributionsData>(cacheKey);
+      let cached = false;
+      let rateLimitInfo: { remaining: number; reset: string } | undefined;
+
+      if (!contributionsMetrics) {
+        contributionsMetrics = await metricsService.getContributionsMetrics();
+        await cacheService.set(cacheKey, contributionsMetrics, 60 * 60 * 24);
+        cached = false;
+      } else {
+        cached = true;
+        rateLimitInfo = undefined;
+      }
+
+      const response = new PortfolioSuccessResponse(
+        'Contributions metrics fetched successfully',
+        contributionsMetrics,
+        cached,
+        rateLimitInfo,
+        requestId,
+        startTime,
+      );
+      response.send(res);
+
+      const duration = Date.now() - startTime;
+      Logger.info('Contributions request completed', {
+        requestId,
+        cached,
+        duration: `${duration}ms`,
+      });
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      Logger.error('Contributions request failed', {
+        requestId,
+        error: error.message,
+        duration: `${duration}ms`,
+      });
+
+      const errorResponse = new GitHubErrorResponse(
+        'Failed to fetch contributions metrics',
+        error.message,
+        undefined,
+        requestId,
+      );
+      errorResponse.send(res);
     }
   },
 };

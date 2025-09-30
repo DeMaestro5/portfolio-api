@@ -12,5 +12,10 @@ router.get(
   RateLimit,
   MetricsController.getRepositoriesMetrics,
 );
+router.get(
+  '/contributions',
+  RateLimit,
+  MetricsController.getContributionsMetrics,
+);
 
 export default router;
