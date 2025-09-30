@@ -8,6 +8,7 @@ import {
   ContributionsData,
   ContributionsSummary,
   LanguageMetric,
+  ProductivityMetrics,
   RepositoryContribution,
   RepositoryMetric,
   RepositorySummary,
@@ -230,7 +231,7 @@ class MetricsService {
 
       const repositories = await githubService.fetchRepositories();
 
-      const commits = await githubService.fetchRecentCommits(repositories);
+      const commits = await githubService.fetchAllCommits(repositories, 365);
 
       const commitMap = new Map<string, GitHubCommit[]>();
 
@@ -387,7 +388,7 @@ class MetricsService {
     try {
       Logger.info('Fetching contributions metrics');
       const repositories = await githubService.fetchRepositories();
-      const commits = await githubService.fetchRecentCommits(repositories);
+      const commits = await githubService.fetchAllCommits(repositories, 365);
 
       const commitMap = new Map<string, GitHubCommit[]>();
 
@@ -466,6 +467,65 @@ class MetricsService {
       recentContributions: commits.slice(0, 5),
     };
   }
-}
 
+  async getProductivityMetrics(): Promise<ProductivityMetrics> {
+    try {
+      const repositories = await githubService.fetchRepositories();
+      const commits = await githubService.fetchAllCommits(repositories, 365);
+
+      // calculate time based metrics
+
+      const now = new Date();
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      const commitsThisWeek = commits.filter(
+        (commit) => new Date(commit.author.date) > oneWeekAgo,
+      );
+
+      const commitsThisMonth = commits.filter(
+        (commit) => new Date(commit.author.date) > oneMonthAgo,
+      );
+
+      const activeDays = new Set(
+        commitsThisMonth.map((commit) =>
+          new Date(commit.author.date).toDateString(),
+        ),
+      ).size;
+
+      const repoMap = new Map<string, GitHubCommit[]>();
+
+      commits.forEach((commit) => {
+        const repoName = commit.repository.name;
+        if (!repoMap.has(repoName)) {
+          repoMap.set(repoName, []);
+        }
+        repoMap.get(repoName)!.push(commit);
+      });
+
+      const mostActive = Array.from(repoMap.entries()).sort(
+        (a, b) => b[1].length - a[1].length,
+      )[0];
+
+      return {
+        totalCommits: commits.length,
+        totalRepositories: repositories.length,
+        mostActiveRepository: mostActive?.[0] || 'Unknown',
+        mostActiveRepositoryCount: mostActive?.[1].length || 0,
+        averageCommitsPerRepository:
+          repositories.length > 0
+            ? Math.round(commits.length / repositories.length)
+            : 0,
+        recentCommits: commits.slice(0, 5),
+        commitsThisWeek: commitsThisWeek.length,
+        commitsThisMonth: commitsThisMonth.length,
+        activeDaysThisMonth: activeDays,
+        lastActivityDate: commits[0]?.author.date || '',
+      };
+    } catch (error: any) {
+      Logger.error('Error fetching productivity metrics:', error);
+      throw error;
+    }
+  }
+}
 export const metricsService = new MetricsService();

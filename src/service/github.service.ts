@@ -653,6 +653,49 @@ class GitHubService {
       throw error;
     }
   }
+  // In your GitHub service, add:
+  async fetchAllCommits(
+    repositories: GitHubRepository[],
+    daysBack: number = 365,
+  ): Promise<GitHubCommit[]> {
+    try {
+      const commitPromises = repositories.map(async (repo) => {
+        try {
+          const response = await this.octokit.rest.repos.listCommits({
+            owner: repo.full_name.split('/')[0],
+            repo: repo.full_name.split('/')[1],
+            per_page: 100, // GitHub's max per page
+            since: new Date(
+              Date.now() - daysBack * 24 * 60 * 60 * 1000,
+            ).toISOString(),
+          });
+
+          return response.data.map((commit) => ({
+            sha: commit.sha,
+            message: commit.commit.message,
+            author: {
+              name: commit.commit.author?.name ?? '',
+              email: commit.commit.author?.email ?? '',
+              date: commit.commit.author?.date ?? '',
+            },
+            repository: {
+              name: repo.name,
+              full_name: repo.full_name,
+            },
+          }));
+        } catch (error) {
+          Logger.warn(`Failed to fetch commits from ${repo.name}`, { error });
+          return [];
+        }
+      });
+
+      const allCommits = await Promise.all(commitPromises);
+      return allCommits.flat();
+    } catch (error) {
+      Logger.error('Error fetching all commits:', error);
+      throw error;
+    }
+  }
 }
 
 export const githubService = new GitHubService();
