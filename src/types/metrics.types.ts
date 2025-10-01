@@ -130,3 +130,24 @@ export interface ProductivityMetrics {
   lastActivityDate: string;
   activeDaysThisMonth: number;
 }
+
+export interface TechnologiesMetric {
+  name: string;
+  count: number;
+  percentage: number;
+  projects: string[];
+}
+
+export interface TechnologiesSummary {
+  totalTechnologies: number;
+  totalProjects: number;
+  averageTechnologiesPerProject: number;
+  mostUsedTechnology: string;
+  mostUsedTechnologyCount: number;
+  technologyDiversity: number;
+}
+
+export interface TechnologiesData {
+  technologies: TechnologiesMetric[];
+  summary: TechnologiesSummary;
+}

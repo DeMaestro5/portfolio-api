@@ -22,5 +22,10 @@ router.get(
   RateLimit,
   MetricsController.getProductivityMetrics,
 );
+router.get(
+  '/technologies',
+  RateLimit,
+  MetricsController.getTechnologiesMetrics,
+);
 
 export default router;

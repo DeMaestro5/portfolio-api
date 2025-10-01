@@ -9,6 +9,7 @@ import {
   ProductivityMetrics,
   RepositoryMetric,
   RepositorySummary,
+  TechnologiesData,
 } from '../types/metrics.types';
 import { cacheService } from '../service/cache.service';
 import { metricsService } from '../service/metrics.service';
@@ -339,6 +340,62 @@ export const MetricsController = {
         error: error.message,
         duration: `${duration}ms`,
       });
+    }
+  },
+
+  async getTechnologiesMetrics(req: Request, res: Response): Promise<void> {
+    const requestId = uuidV4();
+    const startTime = Date.now();
+
+    try {
+      Logger.info('Technologies request started', { requestId });
+
+      const cacheKey = 'metrics:technologies';
+      let technologiesMetrics =
+        await cacheService.get<TechnologiesData>(cacheKey);
+      let cached = false;
+      let rateLimitInfo: { remaining: number; reset: string } | undefined;
+
+      if (!technologiesMetrics) {
+        technologiesMetrics = await metricsService.getTechnologiesMetrics();
+        await cacheService.set(cacheKey, technologiesMetrics, 60 * 60 * 24);
+        cached = false;
+      } else {
+        cached = true;
+        rateLimitInfo = undefined;
+      }
+
+      const response = new PortfolioSuccessResponse(
+        'Technologies metrics fetched successfully',
+        technologiesMetrics,
+        cached,
+        rateLimitInfo,
+        requestId,
+        startTime,
+      );
+      response.send(res);
+
+      const duration = Date.now() - startTime;
+      Logger.info('Technologies request completed', {
+        requestId,
+        cached,
+        duration: `${duration}ms`,
+      });
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      Logger.error('Technologies request failed', {
+        requestId,
+        error: error.message,
+        duration: `${duration}ms`,
+      });
+
+      const errorResponse = new GitHubErrorResponse(
+        'Failed to fetch technologies metrics',
+        error.message,
+        undefined,
+        requestId,
+      );
+      errorResponse.send(res);
     }
   },
 };
