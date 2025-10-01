@@ -12,6 +12,9 @@ import {
   RepositoryContribution,
   RepositoryMetric,
   RepositorySummary,
+  TechnologiesData,
+  TechnologiesMetric,
+  TechnologiesSummary,
 } from '../types/metrics.types';
 import { Project } from '../types/project.types';
 import { githubService } from './github.service';
@@ -526,6 +529,85 @@ class MetricsService {
       Logger.error('Error fetching productivity metrics:', error);
       throw error;
     }
+  }
+
+  async getTechnologiesMetrics(): Promise<TechnologiesData> {
+    try {
+      Logger.info('Fetching technologies metrics');
+
+      const projects = await projectService.getAllProjects();
+
+      const techMap = new Map<string, string[]>();
+
+      projects.forEach((project) => {
+        if (!project.technologies) return;
+        project.technologies.forEach((tech) => {
+          if (!techMap.has(tech)) {
+            techMap.set(tech, []);
+          }
+          techMap.get(tech)!.push(project.name);
+        });
+      });
+
+      const totalProjectsWithTech = new Set(
+        projects.filter(
+          (project) => project.technologies && project.technologies.length > 0,
+        ),
+      ).size;
+
+      const technologiesMetrics: TechnologiesMetric[] = Array.from(
+        techMap.entries(),
+      ).map(([techName, projectsForTech]) => ({
+        name: techName,
+        count: projectsForTech.length,
+        percentage:
+          Math.round((projectsForTech.length / totalProjectsWithTech) * 10000) /
+          100,
+        projects: projectsForTech,
+      }));
+
+      const summary = this.calculateTechnologiesSummary(
+        technologiesMetrics,
+        projects,
+      );
+
+      const techResult: TechnologiesData = {
+        technologies: technologiesMetrics,
+        summary,
+      };
+
+      return techResult;
+    } catch (error: any) {
+      Logger.error('Error fetching technologies metrics:', error);
+      throw error;
+    }
+  }
+  private calculateTechnologiesSummary(
+    technologies: TechnologiesMetric[],
+    projects: Project[],
+  ): TechnologiesSummary {
+    const totalTechnologies = technologies.length;
+    const totalTechnologyUsage = technologies.reduce(
+      (sum, tech) => sum + tech.count,
+      0,
+    );
+    const totalProjects = projects.length;
+
+    const mostUsedTechnology = [...technologies].sort(
+      (a, b) => b.count - a.count,
+    )[0];
+
+    return {
+      totalTechnologies,
+      totalProjects,
+      averageTechnologiesPerProject:
+        totalProjects > 0
+          ? Math.round((totalTechnologyUsage / totalProjects) * 100) / 100
+          : 0,
+      mostUsedTechnology: mostUsedTechnology?.name || 'None',
+      mostUsedTechnologyCount: mostUsedTechnology?.count || 0,
+      technologyDiversity: technologies.length,
+    };
   }
 }
 export const metricsService = new MetricsService();
