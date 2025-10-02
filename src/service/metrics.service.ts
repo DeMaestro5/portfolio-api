@@ -10,6 +10,7 @@ import {
   CurrentStreakMetric,
   LanguageMetric,
   LongestStreakMetric,
+  MetricsSummary,
   ProductivityMetrics,
   RepositoryContribution,
   RepositoryMetric,
@@ -745,6 +746,112 @@ class MetricsService {
       end: today,
       days: currentStreak,
     };
+  }
+  private aggregateSummary(data: {
+    languages: LanguageMetric[];
+    technologies: TechnologiesData;
+    repositories: {
+      repositories: RepositoryMetric[];
+      summary: RepositorySummary;
+    };
+    commits: CommitMetric[];
+    activity: ActivityMetric;
+    productivity: ProductivityMetrics;
+    streak: StreakMetrics;
+  }): MetricsSummary {
+    return {
+      portfolio: {
+        totalProjects: data.repositories.summary.totalRepositories,
+        totalCommits: data.productivity.totalCommits,
+        totalTechnologies: data.technologies.summary.totalTechnologies,
+        totalLanguages: data.languages.length,
+      },
+      activity: {
+        currentStreak: data.streak.currentStreak.days,
+        longestStreak: data.streak.longestStreak.days,
+        activeDaysThisMonth: data.productivity.activeDaysThisMonth,
+        commitsThisMonth: data.productivity.commitsThisMonth,
+        mostActiveRepository: data.commits[0]?.repository || 'None',
+      },
+      techStack: {
+        mostUsedLanguage: data.languages[0]?.name || 'None',
+        mostUsedTechnology:
+          data.technologies.summary.mostUsedTechnology || 'None',
+        languageDiversity: data.languages.length,
+        technologyDiversity: data.technologies.summary.totalTechnologies,
+        averageTechnologiesPerProject:
+          data.technologies.summary.averageTechnologiesPerProject,
+      },
+      productivity: {
+        averageCommitsPerDay: this.calculateAverageCommitsPerDay(
+          data.productivity,
+        ),
+        averageCommitsPerRepository:
+          data.productivity.averageCommitsPerRepository,
+        consistency: this.determineConsistency(data.streak),
+      },
+      recent: {
+        lastActivity: data.productivity.lastActivityDate,
+        recentCommits: data.productivity.commitsThisWeek,
+        recentProjects: data.activity.count,
+        recentTechnologies: data.technologies.technologies
+          .slice(0, 5)
+          .map((t) => t.name),
+      },
+    };
+  }
+  private calculateAverageCommitsPerDay(
+    productivity: ProductivityMetrics,
+  ): number {
+    const totalDays = productivity.activeDaysThisMonth;
+    const totalCommits = productivity.commitsThisMonth;
+    return Math.floor(totalCommits / totalDays);
+  }
+
+  private determineConsistency(
+    streak: StreakMetrics,
+  ): 'high' | 'medium' | 'low' {
+    const days = streak.longestStreak.days;
+    if (days >= 10) return 'high';
+    if (days >= 5) return 'medium';
+    return 'low';
+  }
+
+  async getMetricsSummary(): Promise<MetricsSummary> {
+    try {
+      const [
+        languages,
+        technologies,
+        repositories,
+        commits,
+        activity,
+        productivity,
+        streak,
+      ] = await Promise.all([
+        this.getLanguages(),
+        this.getTechnologiesMetrics(),
+        this.getRepositoriesMetrics(),
+        this.getCommitActivity(),
+        this.getActivity('recent'),
+        this.getProductivityMetrics(),
+        this.getStreakMetrics(),
+      ]);
+
+      const summary = this.aggregateSummary({
+        languages,
+        technologies,
+        repositories,
+        commits: commits.commitMetrics,
+        activity,
+        productivity,
+        streak,
+      });
+
+      return summary;
+    } catch (error) {
+      Logger.error('Error fetching metrics summary:', error);
+      throw error;
+    }
   }
 }
 export const metricsService = new MetricsService();

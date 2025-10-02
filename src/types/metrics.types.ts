@@ -172,3 +172,41 @@ export interface StreakMetrics {
   longestStreak: LongestStreakMetric;
   commitsDays: number;
 }
+
+export interface MetricsSummary {
+  portfolio: {
+    totalProjects: number;
+    totalCommits: number;
+    totalTechnologies: number;
+    totalLanguages: number;
+  };
+
+  activity: {
+    currentStreak: number;
+    longestStreak: number;
+    activeDaysThisMonth: number;
+    commitsThisMonth: number;
+    mostActiveRepository: string;
+  };
+
+  techStack: {
+    mostUsedLanguage: string;
+    mostUsedTechnology: string;
+    languageDiversity: number;
+    technologyDiversity: number;
+    averageTechnologiesPerProject: number;
+  };
+
+  productivity: {
+    averageCommitsPerDay: number;
+    averageCommitsPerRepository: number;
+    consistency: 'high' | 'medium' | 'low';
+  };
+
+  recent: {
+    lastActivity: string;
+    recentCommits: number;
+    recentProjects: number;
+    recentTechnologies: string[];
+  };
+}
