@@ -151,3 +151,24 @@ export interface TechnologiesData {
   technologies: TechnologiesMetric[];
   summary: TechnologiesSummary;
 }
+
+export interface CurrentStreakMetric {
+  start: Date;
+  end: Date;
+  days: number;
+}
+
+export interface LongestStreakMetric {
+  start: Date;
+  end: Date;
+  days: number;
+}
+
+export interface StreakMetrics {
+  totalCommits: number;
+  firstCommit: Date;
+  lastCommit: Date;
+  currentStreak: CurrentStreakMetric;
+  longestStreak: LongestStreakMetric;
+  commitsDays: number;
+}

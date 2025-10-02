@@ -9,6 +9,7 @@ import {
   ProductivityMetrics,
   RepositoryMetric,
   RepositorySummary,
+  StreakMetrics,
   TechnologiesData,
 } from '../types/metrics.types';
 import { cacheService } from '../service/cache.service';
@@ -391,6 +392,61 @@ export const MetricsController = {
 
       const errorResponse = new GitHubErrorResponse(
         'Failed to fetch technologies metrics',
+        error.message,
+        undefined,
+        requestId,
+      );
+      errorResponse.send(res);
+    }
+  },
+
+  async getStreakMetrics(req: Request, res: Response): Promise<void> {
+    const requestId = uuidV4();
+    const startTime = Date.now();
+
+    try {
+      Logger.info('Streak request started', { requestId });
+
+      const cacheKey = 'metrics:streak';
+      let streakMetrics = await cacheService.get<StreakMetrics>(cacheKey);
+      let cached = false;
+      let rateLimitInfo: { remaining: number; reset: string } | undefined;
+
+      if (!streakMetrics) {
+        streakMetrics = await metricsService.getStreakMetrics();
+        await cacheService.set(cacheKey, streakMetrics, 60 * 60 * 24);
+        cached = false;
+      } else {
+        cached = true;
+        rateLimitInfo = undefined;
+      }
+
+      const response = new PortfolioSuccessResponse(
+        'Streak metrics fetched successfully',
+        streakMetrics,
+        cached,
+        rateLimitInfo,
+        requestId,
+        startTime,
+      );
+      response.send(res);
+
+      const duration = Date.now() - startTime;
+      Logger.info('Streak request completed', {
+        requestId,
+        cached,
+        duration: `${duration}ms`,
+      });
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      Logger.error('Streak request failed', {
+        requestId,
+        error: error.message,
+        duration: `${duration}ms`,
+      });
+
+      const errorResponse = new GitHubErrorResponse(
+        'Failed to fetch streak metrics',
         error.message,
         undefined,
         requestId,
