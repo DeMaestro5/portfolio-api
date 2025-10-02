@@ -28,5 +28,6 @@ router.get(
   MetricsController.getTechnologiesMetrics,
 );
 router.get('/streak', RateLimit, MetricsController.getStreakMetrics);
+router.get('/summary', RateLimit, MetricsController.getMetricsSummary);
 
 export default router;
