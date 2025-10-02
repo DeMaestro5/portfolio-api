@@ -1,0 +1,124 @@
+# My Pattern Library
+
+## Pattern 1: Count Occurrences
+
+**When to use:** Need frequency distribution of items
+**Input:** Array of items with a property to count
+**Output:** Count of occurrences per unique value
+**Code template:**
+
+```typescript
+const countMap = new Map<string, string[]>();
+items.forEach((item) => {
+  const key = item.someProperty;
+  if (!countMap.has(key)) {
+    countMap.set(key, []);
+  }
+  countMap.get(key)!.push(item.name);
+});
+```
+
+**Used in:**
+
+- Languages count (2024-09-30) - Count projects per language
+- Technologies count (2024-09-30) - Count projects per technology
+
+## Pattern 2: Group by Key
+
+**When to use:** Need to organize items by a property
+**Input:** Array of items
+**Output:** Map with key → array of items
+**Code template:**
+
+```typescript
+const groupMap = new Map<string, ItemType[]>();
+items.forEach((item) => {
+  const key = item.someProperty;
+  if (!groupMap.has(key)) {
+    groupMap.set(key, []);
+  }
+  groupMap.get(key)!.push(item);
+});
+```
+
+**Used in:**
+
+- Commits by repository (2024-09-30) - Group commits by repo name
+- Contributions by repository (2024-09-30) - Group contributions by repo
+
+## Pattern 3: Transform and Calculate
+
+**When to use:** Need to add calculated fields to grouped data
+**Input:** Map with grouped data
+**Output:** Array with calculated fields
+**Code template:**
+
+```typescript
+const results = Array.from(map.entries())
+  .map(([key, items]) => ({
+    name: key,
+    count: items.length,
+    percentage: Math.round((items.length / total) * 10000) / 100,
+    items: items,
+  }))
+  .sort((a, b) => b.count - a.count);
+```
+
+**Used in:**
+
+- Language metrics (2024-09-30) - Add percentages to language counts
+- Technology metrics (2024-09-30) - Add percentages to tech counts
+- Commit metrics (2024-09-30) - Add calculated fields to commit data
+
+## Pattern 4: Filter by Criteria
+
+**When to use:** Need a subset of data based on conditions
+**Input:** Array of items
+**Output:** Array of items meeting criteria
+**Code template:**
+
+```typescript
+const filtered = items.filter((item) => meetsCondition(item));
+```
+
+**Used in:**
+
+- Recent activity filtering (2024-09-30) - Filter commits by date
+- Active projects (2024-09-30) - Filter projects by activity
+
+## Pattern 5: Aggregate and Summarize
+
+**When to use:** Need totals, averages, or other statistics
+**Input:** Array of items with numeric values
+**Output:** Calculated statistics
+**Code template:**
+
+```typescript
+const total = items.reduce((sum, item) => sum + item.value, 0);
+const average = total / items.length;
+const max = Math.max(...items.map((i) => i.value));
+```
+
+**Used in:**
+
+- Total stars calculation (2024-09-30) - Sum stars across repositories
+- Average technologies per project (2024-09-30) - Calculate averages
+
+# Pattern Recognition Checklist
+
+Before coding, ask:
+
+1. What's my input? (Array? Object? Map?)
+2. What's my output? (Array? Object? Summary?)
+3. What operation? (Count? Group? Filter? Calculate?)
+4. Have I done this before? (Which feature?)
+5. What pattern did I use? (Check library)
+6. Can I reuse it? (Adapt the template)
+
+Common Input → Output patterns:
+
+- Array → Count: Use "Count Occurrences"
+- Array → Group: Use "Group by Key"
+- Array → Subset: Use "Filter by Criteria"
+- Array → Statistics: Use "Aggregate and Summarize"
+- Map → Array: Use "Transform and Calculate"

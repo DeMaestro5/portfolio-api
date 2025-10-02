@@ -7,11 +7,14 @@ import {
   CommitSummary,
   ContributionsData,
   ContributionsSummary,
+  CurrentStreakMetric,
   LanguageMetric,
+  LongestStreakMetric,
   ProductivityMetrics,
   RepositoryContribution,
   RepositoryMetric,
   RepositorySummary,
+  StreakMetrics,
   TechnologiesData,
   TechnologiesMetric,
   TechnologiesSummary,
@@ -607,6 +610,140 @@ class MetricsService {
       mostUsedTechnology: mostUsedTechnology?.name || 'None',
       mostUsedTechnologyCount: mostUsedTechnology?.count || 0,
       technologyDiversity: technologies.length,
+    };
+  }
+
+  async getStreakMetrics(): Promise<StreakMetrics> {
+    try {
+      const repositories = await githubService.fetchRepositories();
+      const commits = await githubService.fetchAllCommits(repositories, 365);
+
+      const commitMap = new Map<string, GitHubCommit[]>();
+
+      commits.forEach((commit) => {
+        const day = new Date(commit.author.date).toDateString();
+        if (!commitMap.has(day)) {
+          commitMap.set(day, []);
+        }
+        commitMap.get(day)!.push(commit);
+      });
+
+      const commitDays = Array.from(commitMap.keys())
+        .map((day) => new Date(day))
+        .sort((a, b) => a.getTime() - b.getTime());
+
+      const streaks = this.calculateStreaks(commitDays);
+
+      return {
+        totalCommits: commits.length,
+        firstCommit: commitDays[0] || new Date(),
+        lastCommit: commitDays[commitDays.length - 1] || new Date(),
+        currentStreak: streaks.currentStreak,
+        longestStreak: streaks.longestStreak,
+        commitsDays: commitDays.length,
+      };
+    } catch (error: any) {
+      Logger.error('Error fetching streak metrics:', error);
+      throw error;
+    }
+  }
+  private calculateStreaks(commitDays: Date[]): {
+    currentStreak: CurrentStreakMetric;
+    longestStreak: LongestStreakMetric;
+  } {
+    if (commitDays.length === 0) {
+      return {
+        currentStreak: { start: new Date(), end: new Date(), days: 0 },
+        longestStreak: { start: new Date(), end: new Date(), days: 0 },
+      };
+    }
+
+    if (commitDays.length === 1) {
+      return {
+        currentStreak: { start: commitDays[0], end: commitDays[0], days: 1 },
+        longestStreak: { start: commitDays[0], end: commitDays[0], days: 1 },
+      };
+    }
+
+    const streaks = this.findConsecutiveDays(commitDays);
+    const currentStreak = this.getCurrentStreak(commitDays);
+
+    const longestStreak =
+      streaks.length > 0
+        ? streaks.reduce((longest, streak) =>
+            streak.days > longest.days ? streak : longest,
+          )
+        : { start: new Date(), end: new Date(), days: 0 };
+
+    return {
+      currentStreak,
+      longestStreak,
+    };
+  }
+  private findConsecutiveDays(
+    dates: Date[],
+  ): Array<{ start: Date; end: Date; days: number }> {
+    const streaks = [];
+    let currentStreak = [dates[0]];
+
+    for (let i = 1; i < dates.length; i++) {
+      const currentDate = dates[i];
+      const previousDate = dates[i - 1];
+      const dayDiff =
+        (currentDate.getTime() - previousDate.getTime()) /
+        (1000 * 60 * 60 * 24);
+
+      if (dayDiff === 1) {
+        // consecutive days
+        currentStreak.push(currentDate);
+      } else {
+        // streak broken
+        if (currentStreak.length > 1) {
+          streaks.push({
+            start: currentStreak[0],
+            end: currentStreak[currentStreak.length - 1],
+            days: currentStreak.length,
+          });
+        }
+        currentStreak = [currentDate];
+      }
+    }
+
+    // add the last streak
+    if (currentStreak.length > 1) {
+      streaks.push({
+        start: currentStreak[0],
+        end: currentStreak[currentStreak.length - 1],
+        days: currentStreak.length,
+      });
+    }
+
+    return streaks;
+  }
+
+  private getCurrentStreak(dates: Date[]): CurrentStreakMetric {
+    const today = new Date();
+    let currentStreak = 0;
+    let startStreak = today;
+
+    for (let i = 0; i < dates.length; i++) {
+      const commitDate = dates[i];
+      const daysDiff = Math.floor(
+        (today.getTime() - commitDate.getTime()) / (1000 * 60 * 60 * 24),
+      );
+
+      if (daysDiff === currentStreak) {
+        currentStreak++;
+        startStreak = commitDate;
+      } else {
+        break;
+      }
+    }
+
+    return {
+      start: startStreak,
+      end: today,
+      days: currentStreak,
     };
   }
 }
