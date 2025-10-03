@@ -19,6 +19,8 @@ import {
   TechnologiesData,
   TechnologiesMetric,
   TechnologiesSummary,
+  TimelineEvent,
+  TimelineMetrics,
 } from '../types/metrics.types';
 import { Project } from '../types/project.types';
 import { githubService } from './github.service';
@@ -852,6 +854,228 @@ class MetricsService {
       Logger.error('Error fetching metrics summary:', error);
       throw error;
     }
+  }
+
+  async getTimelineMetrics(): Promise<TimelineMetrics> {
+    try {
+      Logger.info('Fetching timeline metrics');
+
+      const repositories = await githubService.fetchRepositories();
+      const commits = await githubService.fetchAllCommits(repositories, 365);
+
+      // create timeline events
+      const events = this.createTimeLineEvents(repositories, commits);
+
+      // calculate summary metrics
+      const summary = this.calculateTimelineSummary(
+        repositories,
+        commits,
+        events,
+      );
+
+      // calculate trends
+      const trends = this.calculateTimelineTrends(repositories, commits);
+
+      const timeLineResult = {
+        events: events.sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+        ),
+        summary,
+        trends,
+      };
+
+      return timeLineResult;
+    } catch (error: any) {
+      Logger.error('Error fetching timeline metrics:', error);
+      throw error;
+    }
+  }
+  private createTimeLineEvents(
+    repositories: GitHubRepository[],
+    commits: GitHubCommit[],
+  ): TimelineEvent[] {
+    const events: TimelineEvent[] = [];
+
+    // create project creation events
+    repositories.forEach((repo) => {
+      if (repo.created_at) {
+        events.push({
+          date: repo.created_at || '',
+          type: 'project_created',
+          project: repo.name,
+          description: `Project ${repo.name} created`,
+          metadata: {
+            language: repo.language || undefined,
+            size: repo.size || 0,
+          },
+        });
+      }
+
+      // add star event (if any)
+      if (repo.stargazers_count && repo.stargazers_count > 0) {
+        events.push({
+          date: repo.pushed_at || '',
+          type: 'star_received',
+          project: repo.name,
+          description: `Project ${repo.name} received ${repo.stargazers_count} stars`,
+          metadata: {
+            stars: repo.stargazers_count,
+          },
+        });
+      }
+
+      // add fork event (if any)
+      if (repo.forks_count && repo.forks_count > 0) {
+        events.push({
+          date: repo.pushed_at || '',
+          type: 'fork_received',
+          project: repo.name,
+          description: `Project ${repo.name} received ${repo.forks_count} forks`,
+          metadata: {
+            forks: repo.forks_count,
+          },
+        });
+      }
+    });
+
+    //add commit milestones(every 10th commit per repository)
+    const commitMap = new Map<string, GitHubCommit[]>();
+
+    commits.forEach((commit) => {
+      const repoName = commit.repository.name;
+      if (!commitMap.has(repoName)) {
+        commitMap.set(repoName, []);
+      }
+      commitMap.get(repoName)!.push(commit);
+    });
+
+    commitMap.forEach((repoCommits, repoName) => {
+      //sort commits by date
+      const sortedCommits = [...repoCommits].sort(
+        (a, b) =>
+          new Date(b.author.date).getTime() - new Date(a.author.date).getTime(),
+      );
+
+      //add milestone events
+      for (let i = 9; i < sortedCommits.length; i += 10) {
+        events.push({
+          date: sortedCommits[i].author.date,
+          type: 'commit_milestone',
+          project: repoName,
+          description: `Project ${repoName} reached ${i + 1} commits`,
+          metadata: {
+            commits: i + 1,
+          },
+        });
+      }
+    });
+
+    return events;
+  }
+
+  private calculateTimelineSummary(
+    repositories: GitHubRepository[],
+    commits: GitHubCommit[],
+    events: TimelineEvent[],
+  ): TimelineMetrics['summary'] {
+    const projectEvents = events.filter((e) => e.type === 'project_created');
+    const dates = projectEvents
+      .map((e) => new Date(e.date))
+      .sort((a, b) => a.getTime() - b.getTime());
+
+    const start = dates[0] || new Date();
+    const end = dates[dates.length - 1] || new Date();
+    const days = Math.ceil(
+      (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    // calculate most/least active months
+    const monthlyActivity = new Map<string, number>();
+    commits.forEach((commit) => {
+      const month = new Date(commit.author.date)
+        .toLocaleString()
+        .substring(0, 7);
+      monthlyActivity.set(month, (monthlyActivity.get(month) || 0) + 1);
+    });
+
+    let mostActiveMonth = '';
+    let leastActiveMonth = '';
+    let maxActivity = 0;
+    let minActivity = Infinity;
+
+    monthlyActivity.forEach((count, month) => {
+      if (count > maxActivity) {
+        maxActivity = count;
+        mostActiveMonth = month;
+      }
+      if (count < minActivity) {
+        minActivity = count;
+        leastActiveMonth = month;
+      }
+    });
+    const result = {
+      totalProjects: repositories.length,
+      totalCommits: commits.length,
+      developmentSpan: {
+        start: start.toISOString(),
+        end: end.toISOString(),
+        days,
+      },
+      mostActiveMonth,
+      leastActiveMonth,
+      averageProjectsPerMonth:
+        days > 0
+          ? Math.round((repositories.length / (days / 30)) * 100) / 100
+          : 0,
+    };
+
+    return result;
+  }
+
+  private calculateTimelineTrends(
+    repositories: GitHubRepository[],
+    commits: GitHubCommit[],
+  ): TimelineMetrics['trends'] {
+    //projects over time
+    const projectsOverTime = new Map<string, number>();
+    repositories.forEach((repo) => {
+      const month = new Date(repo.created_at || '')
+        .toLocaleString()
+        .substring(0, 7);
+      projectsOverTime.set(month, (projectsOverTime.get(month) || 0) + 1);
+    });
+    // commits over time
+    const commitsOverTime = new Map<string, number>();
+    commits.forEach((commit) => {
+      const month = new Date(commit.author.date)
+        .toLocaleString()
+        .substring(0, 7);
+      commitsOverTime.set(month, (commitsOverTime.get(month) || 0) + 1);
+    });
+
+    // determine activity growth trend
+    const commitCounts = Array.from(commitsOverTime.values()).sort(
+      (a, b) => b - a,
+    );
+    const recent =
+      commitCounts.slice(-3).reduce((sum, count) => sum + count, 0) / 3;
+    const older =
+      commitCounts.slice(0, 3).reduce((sum, count) => sum + count, 0) / 3;
+
+    let activityGrowth: 'increasing' | 'decreasing' | 'stable' = 'stable';
+    if (recent > older * 1.2) activityGrowth = 'increasing';
+    else if (recent < older * 0.8) activityGrowth = 'decreasing';
+
+    const result = {
+      projectOverTime: Array.from(projectsOverTime.entries())
+        .map(([month, count]) => ({ month, count }))
+        .sort((a, b) => a.month.localeCompare(b.month)),
+      commitsOverTime: Array.from(commitsOverTime.entries())
+        .map(([month, count]) => ({ month, count }))
+        .sort((a, b) => a.month.localeCompare(b.month)),
+      activityGrowth,
+    };
+    return result;
   }
 }
 export const metricsService = new MetricsService();
