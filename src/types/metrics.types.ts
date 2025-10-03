@@ -210,3 +210,44 @@ export interface MetricsSummary {
     recentTechnologies: string[];
   };
 }
+
+export interface TimelineEvent {
+  date: string;
+  type:
+    | 'project_created'
+    | 'project_updated'
+    | 'commit_milestone'
+    | 'activity_peak'
+    | 'star_received'
+    | 'fork_received';
+  project?: string;
+  description: string;
+  metadata?: {
+    commits?: number;
+    stars?: number;
+    forks?: number;
+    language?: string;
+    size?: number;
+  };
+}
+
+export interface TimelineMetrics {
+  events: TimelineEvent[];
+  summary: {
+    totalProjects: number;
+    totalCommits: number;
+    developmentSpan: {
+      start: string;
+      end: string;
+      days: number;
+    };
+    mostActiveMonth: string;
+    leastActiveMonth: string;
+    averageProjectsPerMonth: number;
+  };
+  trends: {
+    projectOverTime: Array<{ month: string; count: number }>;
+    commitsOverTime: Array<{ month: string; count: number }>;
+    activityGrowth: 'increasing' | 'decreasing' | 'stable';
+  };
+}
