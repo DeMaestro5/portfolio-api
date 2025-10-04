@@ -29,6 +29,17 @@ class GitHubService {
     });
   }
 
+  async checkHealth(): Promise<boolean> {
+    try {
+      // Simple health check - just verify we can make a request to GitHub API
+      await this.octokit.rest.rateLimit.get();
+      return true;
+    } catch (error) {
+      Logger.warn('GitHub API health check failed', { error });
+      return false;
+    }
+  }
+
   async fetchProfile(): Promise<GitHubProfile> {
     try {
       Logger.info('Fetching GitHub profile');
