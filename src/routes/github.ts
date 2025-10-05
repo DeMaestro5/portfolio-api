@@ -7,7 +7,7 @@ import {
   getRepositories,
   getRepositoryByName,
   getStats,
-  githubController,
+  getProfile,
   getRepositoryCommits,
   getRepositoryLanguages,
   getRepositoryContributors,
@@ -21,12 +21,7 @@ const router = Router();
 router.use(logGithubApiReq);
 
 // Specific routes first
-router.get(
-  '/profile',
-  RateLimit,
-  validateGithubProfile,
-  githubController.getProfile,
-);
+router.get('/profile', RateLimit, validateGithubProfile, getProfile);
 
 router.get('/overview', RateLimit, getOverview);
 router.get('/activities', RateLimit, getActivities);
