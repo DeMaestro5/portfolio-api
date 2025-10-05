@@ -1,34 +1,30 @@
 import { Router } from 'express';
-import { MetricsController } from '../controller/metrics';
+
 import { RateLimit } from '../middleware/rateLimiter';
+import {
+  getLanguagesMetrics,
+  getStreakMetrics,
+  getTechnologiesMetrics,
+  getMetricsSummary,
+  getTimelineMetrics,
+  getActivityMetrics,
+  getRepositoriesMetrics,
+  getContributionsMetrics,
+  getProductivityMetrics,
+} from '../controller/metrics';
+import { getCommitMetrics } from '../controller/metrics';
 
 const router = Router();
 
-router.get('/languages', RateLimit, MetricsController.getLanguagesMetrics);
-router.get('/activities', RateLimit, MetricsController.getActivityMetrics);
-router.get('/commits', RateLimit, MetricsController.getCommitMetrics);
-router.get(
-  '/repositories',
-  RateLimit,
-  MetricsController.getRepositoriesMetrics,
-);
-router.get(
-  '/contributions',
-  RateLimit,
-  MetricsController.getContributionsMetrics,
-);
-router.get(
-  '/productivity',
-  RateLimit,
-  MetricsController.getProductivityMetrics,
-);
-router.get(
-  '/technologies',
-  RateLimit,
-  MetricsController.getTechnologiesMetrics,
-);
-router.get('/streak', RateLimit, MetricsController.getStreakMetrics);
-router.get('/summary', RateLimit, MetricsController.getMetricsSummary);
-router.get('/timeline', RateLimit, MetricsController.getTimelineMetrics);
+router.get('/languages', RateLimit, getLanguagesMetrics);
+router.get('/activities', RateLimit, getActivityMetrics);
+router.get('/commits', RateLimit, getCommitMetrics);
+router.get('/repositories', RateLimit, getRepositoriesMetrics);
+router.get('/contributions', RateLimit, getContributionsMetrics);
+router.get('/productivity', RateLimit, getProductivityMetrics);
+router.get('/technologies', RateLimit, getTechnologiesMetrics);
+router.get('/streak', RateLimit, getStreakMetrics);
+router.get('/summary', RateLimit, getMetricsSummary);
+router.get('/timeline', RateLimit, getTimelineMetrics);
 
 export default router;
