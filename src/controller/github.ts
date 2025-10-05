@@ -30,24 +30,18 @@ export const getProfile = asyncHandler(
 
     Logger.info('Github profile request started', { requestId });
 
-    // try to get from cache first
     const cacheKey = 'github:profile';
     let profile = await cacheService.get<GitHubProfile>(cacheKey);
     let cached = false;
     let rateLimitInfo: { remaining: number; reset: string } | undefined;
 
     if (!profile) {
-      // if not in cache, fetch from github api
       profile = await githubService.fetchProfile();
-      //cache the result for 1 hour
       await cacheService.set(cacheKey, profile, 3600);
       cached = false;
-
-      // only get rate limit info when making fresh api call
       rateLimitInfo = await getRateLimit();
     } else {
       cached = true;
-      // For cached responses, omit rate limit info
       rateLimitInfo = undefined;
     }
 

@@ -30,14 +30,12 @@ export const getLanguagesMetrics = asyncHandler(
 
     await cacheService.del('metrics:languages');
 
-    // try to get from cache first
     const cacheKey = 'metrics:languages';
     let languagesMetrics = await cacheService.get<LanguageMetric[]>(cacheKey);
     let cached = false;
     let rateLimitInfo: { remaining: number; reset: string } | undefined;
 
     if (!languagesMetrics) {
-      // if not in cache, fetch from metrics service
       languagesMetrics = await metricsService.getLanguages();
       await cacheService.set(cacheKey, languagesMetrics, 60 * 60 * 24);
       cached = false;
