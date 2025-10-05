@@ -18,13 +18,11 @@ export const getProjects = asyncHandler(
 
     Logger.info('Projects request started', { requestId });
 
-    // check if cache is healthy
     const cacheIsHealthy = await cacheService.isHealthy();
     if (!cacheIsHealthy) {
       throw new Error('Cache is not healthy');
     }
 
-    // try to get from cache first
     const cacheKey = 'projects:all';
     let projects = await cacheService.get<Project[]>(cacheKey);
 
@@ -32,7 +30,6 @@ export const getProjects = asyncHandler(
     let rateLimitInfo: { remaining: number; reset: string } | undefined;
 
     if (!projects) {
-      // if not in cache, fetch from service
       projects = await projectService.getAllProjects();
       await cacheService.set(cacheKey, projects, 3600);
       cached = false;
@@ -199,14 +196,12 @@ export const getProjectsByLanguage = asyncHandler(
       return;
     }
 
-    // check cache first
     const cacheKey = `projects:language:${language}`;
     let cachedProjects = await cacheService.get<Project[]>(cacheKey);
     let cached = false;
     let rateLimitInfo: { remaining: number; reset: string } | undefined;
 
     if (!cachedProjects) {
-      // if not in cache, fetch from service
       cachedProjects = await projectService.getProjectsByLanguage(language);
       await cacheService.set(cacheKey, cachedProjects, 3600);
       cached = false;
@@ -251,14 +246,12 @@ export const searchProjects = asyncHandler(
       return;
     }
 
-    // check cache first
     const cacheKey = `projects:search:${query}`;
     let searchResults = await cacheService.get<Project[]>(cacheKey);
     let cached = false;
     let rateLimitInfo: { remaining: number; reset: string } | undefined;
 
     if (!searchResults) {
-      // if not in cache, fetch from service
       searchResults = await projectService.getAllProjects();
 
       searchResults = searchResults.filter((project) => {
