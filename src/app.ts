@@ -33,7 +33,65 @@ app.use(
 app.use(
   express.urlencoded({ limit: '10mb', extended: true, parameterLimit: 50000 }),
 );
-app.use(cors({ origin: corsUrl, optionsSuccessStatus: 200 }));
+const corsOptions = {
+  origin: function (
+    origin: string | undefined,
+    callback: (err: Error | null, allow?: boolean) => void,
+  ) {
+    // Allow requests with no origin (like mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+
+    // Define allowed origins
+    const allowedOrigins = [
+      'http://localhost:5173', // Your main Vercel domain
+      corsUrl, // Your configured CORS URL from config
+      'http://localhost:5173', // Development
+      'http://127.0.0.1:3000', // Development alternative
+    ].filter(Boolean); // Remove any undefined values
+
+    // Check for exact matches first
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Check for Vercel preview deployments (*.vercel.app)
+    if (origin.endsWith('.vercel.app')) {
+      // You can add additional validation here if needed
+      // For example, check if it starts with your project name
+      if (origin.includes('portfolio')) {
+        // Replace 'khronos' with your project name
+        return callback(null, true);
+      }
+    }
+
+    // In development, be more permissive
+    if (environment === 'development') {
+      // Allow any localhost with different ports
+      if (
+        origin.startsWith('http://localhost:') ||
+        origin.startsWith('http://127.0.0.1:')
+      ) {
+        return callback(null, true);
+      }
+    }
+
+    Logger.warn(`CORS blocked origin: ${origin}`);
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true, // Important for sending cookies and auth headers
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: [
+    'Origin',
+    'X-Requested-With',
+    'Content-Type',
+    'Accept',
+    'Cache-Control',
+    'Pragma',
+  ],
+};
+
+app.use(cors(corsOptions));
 
 // Routes
 app.use('/', routes);
