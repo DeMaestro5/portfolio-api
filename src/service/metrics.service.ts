@@ -669,7 +669,7 @@ class MetricsService {
     }
 
     const streaks = this.findConsecutiveDays(commitDays);
-    const currentStreak = this.getCurrentStreak(commitDays);
+    const currentStreak = this.getCurrentStreak([...commitDays].reverse());
 
     const longestStreak =
       streaks.length > 0
@@ -725,28 +725,57 @@ class MetricsService {
   }
 
   private getCurrentStreak(dates: Date[]): CurrentStreakMetric {
-    const today = new Date();
-    let currentStreak = 0;
-    let startStreak = today;
+    if (dates.length === 0) {
+      return { start: new Date(), end: new Date(), days: 0 };
+    }
 
-    for (let i = 0; i < dates.length; i++) {
-      const commitDate = dates[i];
-      const daysDiff = Math.floor(
-        (today.getTime() - commitDate.getTime()) / (1000 * 60 * 60 * 24),
+    // Normalize dates to midnight for accurate day comparison
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const mostRecentCommit = new Date(dates[0]);
+    mostRecentCommit.setHours(0, 0, 0, 0);
+
+    // Calculate days between today and most recent commit
+    const daysSinceLastCommit = Math.floor(
+      (today.getTime() - mostRecentCommit.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    // Streak is broken if last commit was more than 1 day ago
+    // (allows for today or yesterday to maintain current streak)
+    if (daysSinceLastCommit > 1) {
+      return { start: new Date(), end: new Date(), days: 0 };
+    }
+
+    // Count consecutive days backwards from the most recent commit
+    let streakCount = 1;
+    let streakStart = dates[0];
+
+    for (let i = 1; i < dates.length; i++) {
+      const currentDate = new Date(dates[i]);
+      currentDate.setHours(0, 0, 0, 0);
+
+      const previousDate = new Date(dates[i - 1]);
+      previousDate.setHours(0, 0, 0, 0);
+
+      const dayDiff = Math.floor(
+        (previousDate.getTime() - currentDate.getTime()) /
+          (1000 * 60 * 60 * 24),
       );
 
-      if (daysDiff === currentStreak) {
-        currentStreak++;
-        startStreak = commitDate;
+      // Check if dates are consecutive (1 day apart)
+      if (dayDiff === 1) {
+        streakCount++;
+        streakStart = dates[i];
       } else {
         break;
       }
     }
 
     return {
-      start: startStreak,
-      end: today,
-      days: currentStreak,
+      start: streakStart,
+      end: dates[0], // End is the most recent commit date
+      days: streakCount,
     };
   }
   private aggregateSummary(data: {
