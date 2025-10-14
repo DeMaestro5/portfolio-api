@@ -240,7 +240,7 @@ class MetricsService {
 
       const repositories = await githubService.fetchRepositories();
 
-      const commits = await githubService.fetchAllCommits(repositories, 365);
+      const commits = await githubService.fetchAllCommits(repositories);
 
       const commitMap = new Map<string, GitHubCommit[]>();
 
@@ -907,7 +907,7 @@ class MetricsService {
 
       const timeLineResult = {
         events: events.sort(
-          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
         ),
         summary,
         trends,
