@@ -711,6 +711,49 @@ class GitHubService {
       throw error;
     }
   }
+
+  async fetchRepositoryCommitsByProject(
+    repository: GitHubRepository,
+    perPage: number = 100,
+  ): Promise<GitHubCommit[]> {
+    try {
+      Logger.info('Fetching commits for repository', {
+        repositoryName: repository.name,
+      });
+
+      const response = await this.octokit.rest.repos.listCommits({
+        owner: repository.full_name.split('/')[0],
+        repo: repository.full_name.split('/')[1],
+        per_page: perPage,
+      });
+
+      const commits: GitHubCommit[] = response.data.map((commit) => ({
+        sha: commit.sha,
+        message: commit.commit.message,
+        author: {
+          name: commit.commit.author?.name ?? '',
+          email: commit.commit.author?.email ?? '',
+          date: commit.commit.author?.date ?? '',
+        },
+        repository: {
+          name: repository.name,
+          full_name: repository.full_name,
+        },
+      }));
+
+      Logger.info('Repository commits fetched successfully', {
+        repositoryName: repository.name,
+        commitsCount: commits.length,
+      });
+      return commits;
+    } catch (error) {
+      Logger.warn('Failed to fetch commits for repository', {
+        repositoryName: repository.name,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return []; // Return empty array if commits can't be fetched
+    }
+  }
 }
 
 export const githubService = new GitHubService();

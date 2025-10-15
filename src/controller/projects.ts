@@ -115,68 +115,51 @@ export const getProjectById = asyncHandler(
     const startTime = Date.now();
     const { id } = req.params;
 
-    try {
-      //validate id parameter
-      const projectId = parseInt(id);
-      if (isNaN(projectId)) {
-        const response = new GitHubErrorResponse(
-          '40000',
-          'Invalid project ID. Must be a number',
-        );
-        response.send(res);
-        return;
-      }
-
-      //check cache first
-      const cacheKey = `project:${projectId}`;
-      let cachedProject = await cacheService.get<Project>(cacheKey);
-      let cached = false;
-      let rateLimitInfo: { remaining: number; reset: string } | undefined;
-
-      if (!cachedProject) {
-        //if not in cache, fetch from service
-        cachedProject = await projectService.getProjectById(projectId);
-        await cacheService.set(cacheKey, cachedProject, 3600);
-        cached = false;
-        rateLimitInfo = await getRateLimit();
-      } else {
-        cached = true;
-        rateLimitInfo = undefined;
-      }
-
-      const response = new PortfolioSuccessResponse(
-        'Project fetched successfully',
-        cachedProject,
-        cached,
-        rateLimitInfo,
-        requestId,
-        startTime,
+    //validate id parameter
+    const projectId = parseInt(id);
+    if (isNaN(projectId)) {
+      const response = new GitHubErrorResponse(
+        '40000',
+        'Invalid project ID. Must be a number',
       );
       response.send(res);
-
-      const duration = Date.now() - startTime;
-      Logger.info('Project by id request completed', {
-        requestId,
-        cached,
-        duration: `${duration}ms`,
-      });
-    } catch (error: any) {
-      const duration = Date.now() - startTime;
-      Logger.error('Project by id request failed', {
-        requestId,
-        error: error.message,
-        duration: `${duration}ms`,
-      });
-
-      const errorResponse = new GitHubErrorResponse(
-        'Failed to fetch project by id',
-        error.message,
-        undefined,
-        requestId,
-      );
-      errorResponse.send(res);
       return;
     }
+    await cacheService.del(`project:${projectId}`);
+
+    //check cache first
+    const cacheKey = `project:${projectId}`;
+    let cachedProject = await cacheService.get<Project>(cacheKey);
+    let cached = false;
+    let rateLimitInfo: { remaining: number; reset: string } | undefined;
+
+    if (!cachedProject) {
+      //if not in cache, fetch from service
+      cachedProject = await projectService.getProjectById(projectId);
+      await cacheService.set(cacheKey, cachedProject, 3600);
+      cached = false;
+      rateLimitInfo = await getRateLimit();
+    } else {
+      cached = true;
+      rateLimitInfo = undefined;
+    }
+
+    const response = new PortfolioSuccessResponse(
+      'Project fetched successfully',
+      cachedProject,
+      cached,
+      rateLimitInfo,
+      requestId,
+      startTime,
+    );
+    response.send(res);
+
+    const duration = Date.now() - startTime;
+    Logger.info('Project by id request completed', {
+      requestId,
+      cached,
+      duration: `${duration}ms`,
+    });
   },
 );
 

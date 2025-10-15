@@ -1,3 +1,17 @@
+import { GitHubCommit } from './github.types';
+
+export interface RelatedProject {
+  id: number;
+  name: string;
+  description: string | null;
+  html_url: string | null | undefined;
+  language: string | null | undefined;
+  stargazers_count: number | null | undefined;
+  categories: ProjectCategory[];
+  status: ProjectStatus;
+  featured: boolean;
+}
+
 export interface Project {
   id: number;
   name: string;
@@ -15,6 +29,10 @@ export interface Project {
   technologies: string[];
   pushed_at: string | null | undefined;
   topics: string[] | undefined;
+  commits?: GitHubCommit[];
+  builtWith?: string[];
+  keyFeatures?: string[];
+  relatedProjects?: RelatedProject[];
 }
 
 export type ProjectCategory =
