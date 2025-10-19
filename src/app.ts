@@ -42,7 +42,7 @@ const corsOptions = {
 
     // Define allowed origins
     const allowedOrigins = [
-      'https://portfolio-six-black-53.vercel.app/',
+      'https://portfolio-six-black-53.vercel.app',
       corsUrl,
       'http://localhost:5173', // Development
       'http://127.0.0.1:3000', // Development alternative
@@ -55,7 +55,7 @@ const corsOptions = {
 
     // Check for Vercel preview deployments (*.vercel.app)
     if (origin.endsWith('.vercel.app')) {
-      if (origin.includes('Portfolio')) {
+      if (origin.includes('portfolio')) {
         return callback(null, true);
       }
     }
