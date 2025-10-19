@@ -38,13 +38,12 @@ const corsOptions = {
     origin: string | undefined,
     callback: (err: Error | null, allow?: boolean) => void,
   ) {
-    // Allow requests with no origin (like mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
 
     // Define allowed origins
     const allowedOrigins = [
-      'http://localhost:5173', // Your main Vercel domain
-      corsUrl, // Your configured CORS URL from config
+      'https://portfolio-six-black-53.vercel.app/',
+      corsUrl,
       'http://localhost:5173', // Development
       'http://127.0.0.1:3000', // Development alternative
     ].filter(Boolean); // Remove any undefined values
@@ -56,10 +55,7 @@ const corsOptions = {
 
     // Check for Vercel preview deployments (*.vercel.app)
     if (origin.endsWith('.vercel.app')) {
-      // You can add additional validation here if needed
-      // For example, check if it starts with your project name
-      if (origin.includes('portfolio')) {
-        // Replace 'khronos' with your project name
+      if (origin.includes('Portfolio')) {
         return callback(null, true);
       }
     }
