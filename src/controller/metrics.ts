@@ -28,8 +28,6 @@ export const getLanguagesMetrics = asyncHandler(
 
     Logger.info('Languages request started', { requestId });
 
-    await cacheService.del('metrics:languages');
-
     const cacheKey = 'metrics:languages';
     let languagesMetrics = await cacheService.get<LanguageMetric[]>(cacheKey);
     let cached = false;

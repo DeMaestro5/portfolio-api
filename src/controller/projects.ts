@@ -71,8 +71,6 @@ export const getFeaturedProjects = asyncHandler(
       throw new Error('Cache is not healthy');
     }
 
-    await cacheService.clearProjectCache();
-
     const cacheKey = 'projects:featured';
     let featuredProjects = await cacheService.get<Project[]>(cacheKey);
 
@@ -125,16 +123,13 @@ export const getProjectById = asyncHandler(
       response.send(res);
       return;
     }
-    await cacheService.del(`project:${projectId}`);
 
-    //check cache first
     const cacheKey = `project:${projectId}`;
     let cachedProject = await cacheService.get<Project>(cacheKey);
     let cached = false;
     let rateLimitInfo: { remaining: number; reset: string } | undefined;
 
     if (!cachedProject) {
-      //if not in cache, fetch from service
       cachedProject = await projectService.getProjectById(projectId);
       await cacheService.set(cacheKey, cachedProject, 3600);
       cached = false;
@@ -169,7 +164,6 @@ export const getProjectsByLanguage = asyncHandler(
     const startTime = Date.now();
     const { language } = req.params;
 
-    // validate language parameter
     if (!language || language.trim() === '') {
       const response = new GitHubErrorResponse(
         '40000',
@@ -219,7 +213,6 @@ export const searchProjects = asyncHandler(
     const startTime = Date.now();
     const { query } = req.query;
 
-    // validate query parameter
     if (!query || typeof query !== 'string' || query.trim() === '') {
       const response = new GitHubErrorResponse(
         '40000',
