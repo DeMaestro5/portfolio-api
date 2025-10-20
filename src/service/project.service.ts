@@ -13,7 +13,10 @@ class ProjectService {
     try {
       Logger.info('Fetching all projects');
       // get all repositories from github
-      const repositories = await githubService.fetchRepositories();
+      const repositories = await githubService.fetchAllRepositoriesInBatches(
+        15,
+        8,
+      );
       Logger.info(`Fetched ${repositories.length} repositories from GitHub`);
 
       // filter repositories to only include projects
@@ -28,6 +31,40 @@ class ProjectService {
       return projects;
     } catch (error) {
       Logger.error('Error fetching projects', error);
+      throw error;
+    }
+  }
+
+  async getProjectsPaginated(
+    page: number = 1,
+    perPage: number = 10,
+  ): Promise<{ projects: Project[]; hasMore: boolean; totalCount: number }> {
+    try {
+      Logger.info('Fetching projects with pagination', { page, perPage });
+      const { repositories, hasMore, totalCount } =
+        await githubService.fetchRepositoriesPaginated(page, perPage);
+
+      const projectRepos = this.filterRepositories(repositories);
+
+      const projects = projectRepos.map((repo) =>
+        this.mapRepositoryToProject(repo),
+      );
+
+      Logger.info(`Projects fetched with pagination`, {
+        page,
+        perPage,
+        projects: projects.length,
+        hasMore,
+        totalCount,
+      });
+
+      return {
+        projects,
+        hasMore,
+        totalCount,
+      };
+    } catch (error) {
+      Logger.error('Error fetching projects with pagination', error);
       throw error;
     }
   }

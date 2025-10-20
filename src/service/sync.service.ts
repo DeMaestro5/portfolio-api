@@ -86,7 +86,10 @@ class SyncService {
   }
 
   private async syncRepositories(): Promise<GitHubRepository[]> {
-    const repositories = await githubService.fetchRepositories();
+    const repositories = await githubService.fetchAllRepositoriesInBatches(
+      20,
+      10,
+    );
     await cacheService.set('github:repositories', repositories, 1800);
     return repositories;
   }
