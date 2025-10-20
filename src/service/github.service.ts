@@ -94,6 +94,7 @@ class GitHubService {
       const response = await this.octokit.rest.repos.listForUser({
         username: process.env.GITHUB_USERNAME!,
       });
+
       const repositories: GitHubRepository[] = response.data.map((repo) => {
         return {
           id: repo.id,
@@ -133,6 +134,129 @@ class GitHubService {
         'Unexpected error while fetching GitHub repositories',
         error,
       );
+      throw error;
+    }
+  }
+
+  async fetchRepositoriesPaginated(
+    page: number = 1,
+    perPage: number = 10,
+  ): Promise<{
+    repositories: GitHubRepository[];
+    hasMore: boolean;
+    totalCount: number;
+  }> {
+    try {
+      Logger.info('Fetching Github repositories with pagination', {
+        page,
+        perPage,
+      });
+
+      const response = await this.octokit.rest.repos.listForUser({
+        username: process.env.GITHUB_USERNAME!,
+        page: page,
+        per_page: perPage,
+        sort: 'updated',
+        direction: 'desc',
+      });
+
+      const linkHeader = response.headers.link;
+      const hasMore = linkHeader?.includes('rel="next"') || false;
+
+      const totalCount =
+        response.data.length === perPage && hasMore
+          ? page * perPage + 1
+          : (page - 1) * perPage + response.data.length;
+
+      const repositories: GitHubRepository[] = response.data.map((repo) => ({
+        id: repo.id,
+        name: repo.name,
+        full_name: repo.full_name,
+        description: repo.description,
+        language: repo.language,
+        stargazers_count: repo.stargazers_count,
+        forks_count: repo.forks_count,
+        size: repo.size,
+        created_at: repo.created_at,
+        updated_at: repo.updated_at,
+        pushed_at: repo.pushed_at,
+        html_url: repo.html_url,
+        clone_url: repo.clone_url,
+        topics: repo.topics,
+        is_private: repo.private,
+      }));
+
+      Logger.info('GitHub repositories fetched successfully with pagination', {
+        page,
+        perPage,
+        repositories: repositories.length,
+        hasMore,
+        totalCount,
+      });
+
+      return {
+        repositories,
+        hasMore,
+        totalCount,
+      };
+    } catch (error: unknown) {
+      if (error instanceof RequestError) {
+        Logger.error('Failed to fetch GitHub repositories with pagination', {
+          error: error.message,
+          status: error.status,
+          page,
+          perPage,
+        });
+        throw new Error(`GitHub API error: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  async fetchAllRepositoriesInBatches(
+    batchSize: number = 20,
+    maxBatches: number = 10,
+  ): Promise<GitHubRepository[]> {
+    try {
+      Logger.info('Fetch All repositories in batches', {
+        batchSize,
+        maxBatches,
+      });
+
+      const allRepositories: GitHubRepository[] = [];
+      let currentPage = 1;
+      let hasMore = true;
+
+      while (hasMore && currentPage <= maxBatches) {
+        const result = await this.fetchRepositoriesPaginated(
+          currentPage,
+          batchSize,
+        );
+        allRepositories.push(...result.repositories);
+        hasMore = result.hasMore;
+        currentPage++;
+
+        const memUsage = process.memoryUsage();
+        const heapUsedMB = Math.round(memUsage.heapUsed / 1024 / 1024);
+
+        if (heapUsedMB > 300) {
+          Logger.warn('Memory usage high, stopping batch fetch', {
+            heapUsedMB,
+            currentPage,
+            totalRepositories: allRepositories.length,
+          });
+          break;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      Logger.info('Batch fetch completed', {
+        totalRepositories: allRepositories.length,
+        batchProcessed: currentPage - 1,
+      });
+      return allRepositories;
+    } catch (error: unknown) {
+      Logger.error('Failed to fetch repositories in batches', error);
       throw error;
     }
   }

@@ -238,9 +238,12 @@ class MetricsService {
     try {
       Logger.info('Fetching commit activity metrics');
 
-      const repositories = await githubService.fetchRepositories();
+      const repositories = await githubService.fetchAllRepositoriesInBatches(
+        15,
+        8,
+      );
 
-      const commits = await githubService.fetchAllCommits(repositories);
+      const commits = await this.fetchCommitsInBatches(repositories);
 
       const commitMap = new Map<string, GitHubCommit[]>();
 
@@ -284,13 +287,54 @@ class MetricsService {
     }
   }
 
+  private async fetchCommitsInBatches(
+    repositories: GitHubRepository[],
+    batchSize: number = 5,
+  ): Promise<GitHubCommit[]> {
+    const allCommits: GitHubCommit[] = [];
+
+    for (let i = 0; i < repositories.length; i += batchSize) {
+      const batch = repositories.slice(i, i + batchSize);
+
+      const batchPromises = batch.map(async (repo) => {
+        try {
+          return await githubService.fetchRepositoryCommitsByProject(repo, 50);
+        } catch (error) {
+          Logger.warn(`Failed to fetch commits for ${repo.name}`, { error });
+          return [];
+        }
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+      allCommits.push(...batchResults.flat());
+
+      // Memory check
+      const memUsage = process.memoryUsage();
+      const heapUsedMB = Math.round(memUsage.heapUsed / 1024 / 1024);
+
+      if (heapUsedMB > 350) {
+        Logger.warn('Memory usage high during commit processing', {
+          heapUsedMB,
+        });
+        break;
+      }
+
+      // Small delay between batches
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    return allCommits;
+  }
+
   async getRepositoriesMetrics(): Promise<{
     repositories: RepositoryMetric[];
     summary: RepositorySummary;
   }> {
     try {
       Logger.info('Fetching repositories metrics');
-      const repositories = await githubService.fetchRepositories();
+      const repositories = await githubService.fetchAllRepositoriesInBatches(
+        20,
+        10,
+      );
       const repositoryMetrics = repositories
         .map((repository) => this.transformRepository(repository))
         .sort((a, b) => (b.stars || 0) - (a.stars || 0));

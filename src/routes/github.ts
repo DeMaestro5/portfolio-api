@@ -5,6 +5,7 @@ import {
   getActivities,
   getOverview,
   getRepositories,
+  getRepositoriesPaginated,
   getRepositoryByName,
   getStats,
   getProfile,
@@ -26,6 +27,7 @@ router.get('/profile', RateLimit, validateGithubProfile, getProfile);
 router.get('/overview', RateLimit, getOverview);
 router.get('/activities', RateLimit, getActivities);
 router.get('/repositories', RateLimit, getRepositories);
+router.get('/paginated-repositories', RateLimit, getRepositoriesPaginated);
 router.get('/stats', RateLimit, getStats);
 router.get('/events', RateLimit, getEvents);
 router.post('/sync', RateLimit, syncGitHubData);

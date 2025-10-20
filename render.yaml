@@ -4,8 +4,8 @@ services:
     name: portfolio-api
     env: node
     plan: starter
-    buildCommand: npm ci && npm run build:render
-    startCommand: npm run serve
+    buildCommand: NODE_OPTIONS="--max-old-space-size=2048" npm ci && npm run build:render
+    startCommand: NODE_OPTIONS="--max-old-space-size=512" npm run serve
     envVars:
       - key: NODE_ENV
         value: production

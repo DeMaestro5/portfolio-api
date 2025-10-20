@@ -10,6 +10,7 @@ import {
   ErrorType,
 } from './core/ApiError';
 import routes from './routes';
+import { memoryMonitor } from './middleware/memoryMonitor';
 
 process.on('uncaughtException', (e) => {
   Logger.error(e);
@@ -19,7 +20,7 @@ const app = express();
 
 app.use(
   express.json({
-    limit: '10mb',
+    limit: '2mb',
     verify: (req: any, _res, buf) => {
       if (
         req.originalUrl.includes('/webhook') ||
@@ -31,8 +32,11 @@ app.use(
   }),
 );
 app.use(
-  express.urlencoded({ limit: '10mb', extended: true, parameterLimit: 50000 }),
+  express.urlencoded({ limit: '2mb', extended: true, parameterLimit: 50000 }),
 );
+
+app.use(memoryMonitor);
+
 const corsOptions = {
   origin: function (
     origin: string | undefined,

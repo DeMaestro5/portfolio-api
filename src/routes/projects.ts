@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   getProjects,
+  getProjectsPaginated,
   getFeaturedProjects,
   getProjectsByLanguage,
   searchProjects,
@@ -13,6 +14,7 @@ const router = Router();
 router.use(logGithubApiReq);
 // Specific routes first
 router.get('/all-projects', RateLimit, getProjects);
+router.get('/all-projects-paginated', RateLimit, getProjectsPaginated);
 router.get('/featured', RateLimit, getFeaturedProjects);
 router.get('/by-language/:language', RateLimit, getProjectsByLanguage);
 router.get('/search', RateLimit, searchProjects);

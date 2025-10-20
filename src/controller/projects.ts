@@ -60,6 +60,71 @@ export const getProjects = asyncHandler(
   },
 );
 
+export const getProjectsPaginated = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const requestId = uuidv4();
+    const startTime = Date.now();
+
+    const page = parseInt(req.query.page as string) || 1;
+    const perPage = Math.min(parseInt(req.query.perPage as string) || 10, 50);
+
+    Logger.info('Projects request started', page, perPage);
+
+    const cacheIsHealthy = await cacheService.isHealthy();
+    if (!cacheIsHealthy) {
+      throw new Error('Cache is not healthy');
+    }
+
+    const cacheKey = `projects:page:${page}:perPage:${perPage}`;
+    let result = await cacheService.get<{
+      projects: Project[];
+      hasMore: boolean;
+      totalCount: number;
+    }>(cacheKey);
+    let cached = false;
+    let rateLimitInfo: { remaining: number; reset: string } | undefined;
+
+    if (!result) {
+      result = await projectService.getProjectsPaginated(page, perPage);
+      await cacheService.set(cacheKey, result, 3600);
+      cached = false;
+      rateLimitInfo = await getRateLimit();
+    } else {
+      cached = true;
+      rateLimitInfo = undefined;
+    }
+
+    const projects = result.projects;
+
+    const response = new PortfolioSuccessResponse(
+      'Projects fetched successfully',
+      {
+        projects,
+        pagination: {
+          page,
+          perPage,
+          hasMore: result.hasMore,
+          totalCount: result.totalCount,
+        },
+      },
+      cached,
+      rateLimitInfo,
+      requestId,
+      startTime,
+    );
+    response.send(res);
+    const duration = Date.now() - startTime;
+    Logger.info('Projects request completed', {
+      requestId,
+      cached,
+      duration: `${duration}ms`,
+      projectCount: projects.length,
+      page,
+      perPage,
+    });
+  },
+);
+
 export const getFeaturedProjects = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const requestId = uuidv4();
