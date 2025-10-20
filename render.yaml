@@ -15,18 +15,18 @@ services:
       - key: REDIS_URL
         fromService:
           type: redis
-          name: khronos-redis
+          name: portfolio-redis
           property: connectionString
       # Individual Redis components as backup
       - key: REDIS_HOST
         fromService:
           type: redis
-          name: khronos-redis
+          name: portfolio-redis
           property: host
       - key: REDIS_PORT
         fromService:
           type: redis
-          name: khronos-redis
+          name: portfolio-redis
           property: port
       - key: REDIS_PASSWORD
         value: ''
