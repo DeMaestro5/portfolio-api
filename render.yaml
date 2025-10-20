@@ -5,7 +5,7 @@ services:
     env: node
     plan: starter
     buildCommand: NODE_OPTIONS="--max-old-space-size=2048" npm ci && npm run build:render
-    startCommand: NODE_OPTIONS="--max-old-space-size=512" npm run serve
+    startCommand: NODE_OPTIONS="--max-old-space-size=400" npm run serve
     envVars:
       - key: NODE_ENV
         value: production
