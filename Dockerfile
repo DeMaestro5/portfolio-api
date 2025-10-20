@@ -1,23 +1,29 @@
-# Here we are getting our node as Base image
+# Base image
 FROM node:20.10.0
 
-# create user in the docker image
-USER node
-
-# Creating a new directory for app files and setting path in the container
+# Create app dir and set ownership
 RUN mkdir -p /home/node/app && chown -R node:node /home/node/app
-
-# setting working directory in the container
 WORKDIR /home/node/app
 
-# grant permission of node project directory to node user
+# Use non-root user for installs and runtime
+USER node
+
+# Install dependencies first (leverage Docker layer cache)
+COPY --chown=node:node package*.json ./
+RUN npm ci
+
+# Copy the rest of the source
 COPY --chown=node:node . .
 
-# installing the dependencies into the container
-RUN npm install
+# Build TypeScript during image build (not at runtime)
+RUN npm run build
 
-# container exposed network port number
+# Runtime environment and memory cap (stay under Render Starter 512Mi)
+ENV NODE_ENV=production
+ENV NODE_OPTIONS="--max-old-space-size=400"
+
+# Expose application port
 EXPOSE 3000
 
-# command to run within the container
-CMD [ "npm", "start" ]
+# Run the compiled server directly
+CMD [ "node", "-r", "dotenv/config", "build/server.js" ]
